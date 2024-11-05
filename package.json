@@ -1,0 +1,21 @@
+{
+  "name": "chemistrygame",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node server.js"
+  },
+  "keywords": [],
+  "engines": {
+    "node": "18.6"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.1",
+    "vercel": "^37.14.0",
+    "ws": "^8.18.0"
+  }
+}

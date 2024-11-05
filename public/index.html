@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multiplayer Game</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { background-color: #eee; display: block; }
+    #startScreen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border: 1px solid #000;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #iconSelection img {
+      width: 100px;
+      height: 100px;
+      margin: 5px;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    #ground {
+      display: none;
+    }
+    #iconSelection img.selected {
+      border: 2px solid blue;
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen">
+    <h2>Enter Your Name</h2>
+    <input type="text" id="playerNameInput" placeholder="Player Name" />
+    <h3>Select an Icon</h3>
+    <div id="iconSelection">
+      <img src="hawktuah.png" alt="Icon 1" class="icon" data-icon="hawktuah.png" id="hawk">
+      <img src="troll.webp" alt="Icon 2" class="icon" data-icon="troll.webp" id="troll">
+      <img src="spongbob.png" alt="Icon 3" class="icon" data-icon="spongbob.png" id="spongbob">
+      <img src="stephen.jpeg" alt="Icon 2" class="icon" data-icon="stephen.jpeg" id="stephen">
+      <img src="daring.jpeg" alt="Icon 3" class="icon" data-icon="daring.jpeg" id="daring">
+      <!-- Add more icons as needed -->
+    </div>
+    <embed loop="true" src="bgmusic.mp3" hidden="true" type="video/quicktime"></embed>
+
+    <img src="ground.png" id="ground">
+    <button id="startGameButton" disabled>Start Game</button>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const GRASS_HEIGHT = canvas.height/2 - 37.5; // Height of the grass section
+
+    let playerName = "";
+    let playerIcon = "";
+    let playerIconHTML;
+    let myPlayerId = null; // Store the current player's ID
+    let gameStarted = false;
+    let cameraX = 0; // Camera position on the X-axis
+    let cameraY = 0;
+    const groundLevel = canvas.height - GRASS_HEIGHT; // Fixed ground level
+    const groundImage = new Image();
+groundImage.src = 'ground.png'; // Path to the ground image
+
+
+    class Player {
+      constructor(id, x, y, w, h, spritePath, name, opacity = 1) {
+        this.id = id; // Unique ID for each player
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.speedX = 0;
+        this.speedY = 0;
+        this.gravity = 0.6; // Gravity strength
+        this.jumpSpeed = -15; // Jump speed
+        this.sprite = new Image();
+        this.sprite.src = spritePath;
+        this.loaded = false;
+        this.opacity = opacity; // Set opacity for players
+        this.name = name; // Player's name
+        this.onObject = false; // Track if the player is on a parkour object
+        this.jumpCount = 0; // Track the number of jumps
+        this.maxJumps = 2; // Max number of jumps allowed (double jump)
+
+        this.sprite.onload = () => {
+          this.loaded = true;
+        };
+      }
+
+      draw() {
+        if (this.loaded) {
+          ctx.globalAlpha = this.opacity; // Set opacity for drawing
+          ctx.drawImage(this.sprite, this.x - cameraX, this.y - cameraY, this.w, this.h);
+          ctx.globalAlpha = 1; // Reset opacity back to full
+
+          // Draw the player's name above the character
+          ctx.fillStyle = 'black';
+          ctx.font = '16px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(this.name, this.x - cameraX + this.w / 2, this.y - cameraY - 10); // Positioning the name above the player
+        }
+      }
+
+      update(parkourObjects) {
+    // Apply horizontal movement
+    this.x += this.speedX; 
+
+    // Horizontal collision with parkour objects
+    for (let obj of parkourObjects) {
+        if (this.collidesWith(obj)) {
+            if (this.speedX > 0) {
+                this.x = obj.x - this.w;
+            } else if (this.speedX < 0) {
+                this.x = obj.x + obj.w;
+            }
+        }
+    }
+
+    // Apply gravity
+    this.y += this.speedY;
+    this.speedY += this.gravity;
+
+    // Ground collision detection
+    const onGround = this.y + this.h >= canvas.height - GRASS_HEIGHT;
+    if (onGround) {
+        this.y = canvas.height - this.h - GRASS_HEIGHT;
+        this.speedY = 0;
+        this.jumpCount = 0; // Reset jump count on ground contact
+        this.onObject = false;
+    }
+
+    // Check collision with parkour objects
+    this.onObject = false; // Reset onObject before checking collisions
+    for (let obj of parkourObjects) {
+        if (this.collidesWith(obj)) {
+            // Check if falling onto the top of an object
+            if (this.speedY > 0 && this.y + this.h <= obj.y + obj.h) {
+                this.y = obj.y - this.h;
+                this.speedY = 0;
+                this.onObject = true;
+                this.jumpCount = 0; // Reset jump count on parkour object contact
+            }
+            // Stop upward movement if colliding with the bottom of the parkour object
+            if (this.speedY < 0 && this.y <= obj.y + obj.h && this.y + this.h > obj.y) {
+                this.y = obj.y + obj.h;
+                this.speedY = 0;
+            }
+        }
+    }
+
+    this.draw();
+}
+
+      collidesWith(obj) {
+        return this.x < obj.x + obj.w &&
+               this.x + this.w > obj.x &&
+               this.y < obj.y + obj.h &&
+               this.y + this.h > obj.y;
+      }
+
+      jump() {
+    // Check if the player is on the ground or a parkour object
+    const onGround = this.y + this.h >= canvas.height - GRASS_HEIGHT;
+
+    // Allow jump only if we are on the ground, on an object, or within the allowed jump count
+    if (onGround) {
+        this.jumpCount = 0; // Reset jump count if on the ground
+    }
+
+    const canJump = (this.jumpCount < this.maxJumps); // Allow jumping if jump count is less than max jumps
+    console.log("yo: " + this.jumpCount); // Debug output for jump count
+
+    if (canJump) {
+        this.speedY = this.jumpSpeed; // Set jump speed
+        this.jumpCount++; // Increment jump count
+    }
+}
+    }
+
+    class ParkourObject {
+      constructor(img, x, y, w, h, color, isMoving = false, minX = 0, maxX = 0, speed = 0) {
+        this.img = new Image();
+        this.img.src = img;
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+        this.isMoving = isMoving;
+        this.minX = minX;
+        this.maxX = maxX;
+        this.speed = speed;
+        this.direction = 1;
+      }
+
+      update() {
+        if (this.isMoving) {
+          this.x += this.speed * this.direction;
+
+          if (this.x <= this.minX || this.x + this.w >= this.maxX) {
+            this.direction *= -1;
+          }
+        }
+        this.draw();
+      }
+
+      draw() {
+        ctx.fillStyle = this.color;
+        ctx.drawImage(this.img, this.x - cameraX, this.y - cameraY, this.w, this.h);
+      }
+    }
+
+    class Controller {
+      constructor(playerId) {
+        this.playerId = playerId;
+        this.up = false;
+        this.right = false;
+        this.left = false;
+
+        let keyEvent = (e) => {
+          if (this.playerId === myPlayerId) { // Only respond to keys for this player
+            if (e.code === "KeyW" || e.code === "ArrowUp") { this.up = e.type === 'keydown'; }
+            if (e.code === "KeyD" || e.code === "ArrowRight") { this.right = e.type === 'keydown'; }
+            if (e.code === "KeyA" || e.code === "ArrowLeft") { this.left = e.type === 'keydown'; }
+          }
+        };
+
+        addEventListener('keydown', keyEvent);
+        addEventListener('keyup', keyEvent);
+      }
+    }
+
+    // Create parkour objects
+    // Create parkour objects with more space and higher positioning
+const parkourObjects = [
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 200, canvas.height - GRASS_HEIGHT - 150, 75, 75, 'brown', true, 0, 500, 5), // Parkour box 1
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 500, canvas.height - GRASS_HEIGHT - 175, 75, 75, 'brown'), // Parkour box 2
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 850, canvas.height - GRASS_HEIGHT - 225, 75, 75, 'brown'), // Parkour box 3
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 1200, canvas.height - GRASS_HEIGHT - 300, 75, 75, 'brown'), // Parkour box 4
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 1600, canvas.height - GRASS_HEIGHT - 400, 75, 75, 'brown', true, 1500, 2000, 5), // Parkour box 5 (moving)
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 2000, canvas.height - GRASS_HEIGHT - 500, 75, 75, 'brown'), // Parkour box 6
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 2400, canvas.height - GRASS_HEIGHT - 600, 75, 75, 'brown'), // Parkour box 7 (higher)
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 2800, canvas.height - GRASS_HEIGHT - 700, 75, 75, 'brown', true, 2600, 3100, 5), // Parkour box 9 (moving)
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 3200, canvas.height - GRASS_HEIGHT - 800, 75, 75, 'brown'), // Parkour box 10 (higher)
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 3100, canvas.height - GRASS_HEIGHT - 1150, 75, 75, 'brown'), // Parkour box 11 (higher)
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 3500, canvas.height - GRASS_HEIGHT - 1000, 75, 75, 'brown'), // Parkour box 12 (higher)
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 3700, canvas.height - GRASS_HEIGHT - 1150, 75, 75, 'brown'), // Parkour box 13 (moving)
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 3900, canvas.height - GRASS_HEIGHT - 1200, 75, 75, 'brown'), // Parkour box 14 (high)
+  new ParkourObject("/lab_tileset/pngs/orange_blue/platform_inner_repeating.png", 4000, canvas.height - GRASS_HEIGHT - 1350, 75, 75, 'brown') // Parkour box 15 (high)
+];
+
+const cloudImage = new Image();
+cloudImage.src = 'cloud.png';
+
+class Cloud {
+  constructor() {
+    // Randomly determine whether the cloud will come from the left or right
+    this.startSide = Math.random() < 0.001 ? 'left' : 'right';
+    
+    // Set initial position based on the start side
+    if (this.startSide === 'left') {
+      this.x = -Math.random() * 200 - 100; // Start offscreen on the left
+    } else {
+      this.x = canvas.width + Math.random() * 100; // Start offscreen on the right
+    }
+    
+    // Set random Y position (higher part of the screen)
+    this.y = Math.random() * (canvas.height / 5);
+
+    // Set random speed, clouds will move faster with a range from 1 to 3 pixels per frame
+    this.speed = Math.random() * 2 + 1; 
+
+    // Randomize size for clouds
+    this.width = Math.random() * 100 + 100;  // Cloud width between 100 and 200
+    this.height = this.width * 0.6;  // Keep clouds proportional
+
+    // Set a random vertical movement to create slight up and down movement
+    this.verticalSpeed = Math.random() * 0.2 - 0.1;  // Random speed between -0.1 and 0.1
+  }
+
+  // Update the cloud's position
+  update() {
+    // Move horizontally based on direction (left or right)
+    if (this.startSide === 'left') {
+      this.x += this.speed;  // Move right if starting from left
+    } else {
+      this.x -= this.speed;  // Move left if starting from right
+    }
+
+    // Move vertically with slight random vertical movement
+    this.y += this.verticalSpeed;
+
+    // Reset the cloud's position if it goes off-screen
+    if (this.x + this.width < 0 || this.x > canvas.width) {
+      this.reset();  // Reset position to the opposite side
+    }
+  }
+
+  // Reset the cloud's position and properties
+  reset() {
+    // Randomly reset direction (left or right)
+    this.startSide = Math.random() < 0.2 ? 'left' : 'right';
+
+    // Set new initial X position based on the start side
+    if (this.startSide === 'left') {
+      this.x = -Math.random() * 200 - 100;  // Start offscreen on the left
+    } else {
+      this.x = canvas.width + Math.random() * 100;  // Start offscreen on the right
+    }
+    
+    // Set new random Y position
+    this.y = Math.random() * (canvas.height / 3);
+
+    // Set new random speed (between 1 and 3)
+    this.speed = Math.random() * 2 + 1; 
+
+    // Randomize cloud size
+    this.width = Math.random() * 100 + 100;  // Cloud width between 100 and 200
+    this.height = this.width * 0.6;  // Keep clouds proportional
+
+    // Set new random vertical movement
+    this.verticalSpeed = Math.random() * 0.2 - 0.1;  // Slight vertical movement
+  }
+
+  // Draw the cloud on the canvas
+  draw() {
+    ctx.drawImage(cloudImage, this.x, this.y, this.width, this.height);
+  }
+}
+
+// Array to store clouds
+const maxClouds = 3;
+let clouds = [];
+
+// Function to spawn clouds at random intervals
+function spawnClouds() {
+  if (Math.random() < 0.001) {  // 3% chance to spawn a cloud on each frame
+    if (clouds.length < maxClouds) {
+    clouds.push(new Cloud());  // Add a new cloud to the array
+  }
+  }
+}
+
+// Function to update and draw all clouds
+function updateClouds() {
+  clouds.forEach(cloud => {
+    cloud.update();  // Update cloud position
+    cloud.draw();    // Draw the cloud on the canvas
+  });
+}
+
+
+const canvasWidth = canvas.width;
+const canvasHeight = canvas.height;
+
+// Define spike properties and spacing
+const spikeHeight = 50;  // Height of each spike
+const spikeWidth = 50;   // Width of each spike
+const spikeSpacing = 100; // Space between each spike
+
+// Initialize the spikes array, starting at x = 100 and spacing them out
+const spikes = [];
+for (let x = 200; x < 98000; x += spikeSpacing) {
+  spikes.push({ x, y: canvasHeight - GRASS_HEIGHT, w: spikeWidth, h: spikeHeight, type: 'spike' });
+}
+
+// Function to draw spikes, which will stay fixed relative to the ground
+function drawSpikes(cameraX, cameraY) {
+  ctx.fillStyle = 'gray'; // Color of the spikes
+
+  // Loop through the spikes and draw them
+  spikes.forEach(spike => {
+    // Draw triangle spike using the fill method
+    ctx.beginPath();
+    ctx.moveTo(spike.x - cameraX, spike.y - cameraY); // Bottom-left point
+    ctx.lineTo(spike.x - cameraX + spike.w / 2, spike.y - cameraY - spike.h); // Top point
+    ctx.lineTo(spike.x - cameraX + spike.w, spike.y - cameraY); // Bottom-right point
+    ctx.closePath();
+    ctx.fill();
+  });
+}
+
+// Function to check for collision with spikes
+function checkForSpikeCollision(player) {
+  for (let i = 0; i < spikes.length; i++) {
+    const spike = spikes[i];
+
+    // Check if the player's bottom side is within the spike area
+    if (
+      player.x + player.w > spike.x &&
+      player.x < spike.x + spike.w &&
+      player.y + player.h > spike.y - spike.h && // Player's bottom is above the spike's top
+      player.y + player.h < spike.y // Player's bottom is below the spike's base
+    ) {
+      return true; // Collision with a spike detected
+    }
+  }
+  return false; // No collision with any spike
+}
+
+// Function to reset the player to the start position
+function resetPlayerPosition(player) {
+  player.x = 50; // Starting X position
+  player.y = canvas.height - GRASS_HEIGHT - 150; // Starting Y position
+  player.speedX = 0; // Reset horizontal speed
+  player.speedY = 0; // Reset vertical speed
+  player.jumpCount = 0; // Reset jumps
+  player.opacity = 1; // Reset opacity if needed
+}
+
+class WindBlower {
+  constructor(x, y, w, h, force) {
+    this.x = x; // x position of the windblower
+    this.y = y; // y position of the windblower
+    this.w = w; // width of the windblower's area
+    this.h = h; // height of the windblower's area
+    this.force = force; // the force that pushes the player up (negative value, simulating upward force)
+    this.sprite = new Image();
+    this.sprite.src = "windblower.png";
+    this.loaded = false;
+    this.sprite.onload = () => {
+      this.loaded = true;
+    };
+  }
+
+  // Check if the player is in the range of the windblower
+  affectsPlayer(player) {
+    return player.x + player.w > this.x &&
+           player.x < this.x + this.w &&
+           player.y + player.h > this.y &&
+           player.y < this.y + this.h;
+  }
+
+  // Apply the wind force to the player if they're within range
+  applyEffect(player) {
+    if (this.affectsPlayer(player)) {
+      player.speedY = this.force; // Apply upward force to the player
+    }
+  }
+
+  // Draw the windblower (optional: for visualization on the canvas)
+  draw() {
+    if (this.loaded) {
+        ctx.drawImage(this.sprite, this.x - cameraX, this.y - cameraY, this.w, this.h)
+    }
+  }
+}
+
+const windblowers = [
+  new WindBlower(1000, canvas.height - GRASS_HEIGHT - 200, 200, 50, -15), // A windblower that pushes the player upwards
+  new WindBlower(2200, canvas.height - GRASS_HEIGHT - 350, 200, 50, -20), // Another windblower
+];
+
+
+
+    // Initialize controllers for each player
+    const controllers = {};
+
+    // WebSocket connection
+    const socket = new WebSocket(`wss://${window.location.host}`);
+
+    socket.addEventListener('open', () => {
+      console.log('WebSocket connection established');
+    });
+
+    // Listen for messages
+    const players = {};
+
+// Handle incoming messages from the server
+socket.onmessage = (event) => {
+  // Check if event.data is already a string
+  let messageText = '';
+  if (typeof event.data === 'string') {
+    messageText = event.data; // Directly use the string
+  } else if (event.data instanceof Blob) {
+    // If it's a Blob, use the text() method
+    event.data.text().then((text) => {
+      messageText = text;
+      handleMessage(messageText);
+    }).catch((err) => {
+      console.error('Error reading text from Blob:', err);
+    });
+    return; // Exit early to avoid further processing
+  } else {
+    console.error('Received unsupported data type:', event.data);
+    return;
+  }
+
+  // Handle the message after it's determined to be a valid string
+  handleMessage(messageText);
+};
+
+function handleMessage(text) {
+  try {
+    const data = JSON.parse(text); // Try to parse the JSON data
+    console.log(`Received message of type: ${data.type}`);
+
+    if (data.type === 'positionUpdate') {
+      if (!players[data.id]) {
+        var image1 = new Image()
+        image1.src = playerIconHTML
+        players[data.id] = new Player(data.id, 50, canvas.height - GRASS_HEIGHT - 150, 75, 75, data.icon, data.name, 0.5);
+        controllers[data.id] = new Controller(data.id); // Create a controller for this player
+        console.log(`Added new player: ${data.id}`);
+      }
+      players[data.id].x = data.x;
+      players[data.id].y = data.y;
+      console.log(`Player ${data.id} position updated to: (${data.x}, ${data.y})`);
+
+    }
+  } catch (e) {
+    console.error('Error parsing message:', e);
+  }
+}
+
+
+
+
+
+    // Icon selection event
+    const icons = document.querySelectorAll('.icon');
+    icons.forEach(icon => {
+      icon.addEventListener('click', function() {
+        // Remove 'selected' class from all icons
+        icons.forEach(i => i.classList.remove('selected'));
+        // Add 'selected' class to the clicked icon
+        this.classList.add('selected');
+        playerIcon = this.getAttribute('data-icon'); // Get the selected icon
+        playerIconHTML = this.getAttribute('id') + ".png";
+        document.getElementById('startGameButton').disabled = !playerIcon; // Enable the start button if an icon is selected
+      });
+    });
+
+    document.getElementById('startGameButton').addEventListener('click', () => {
+      playerName = document.getElementById('playerNameInput').value;
+      if (!playerName || !playerIcon) return; // Prevent starting if name or icon is missing
+
+      // Hide start screen
+      document.getElementById('startScreen').style.display = 'none';
+
+      // Create local player
+      myPlayerId = Math.random().toString(36).substring(2, 15); // Unique ID for this player
+      players[myPlayerId] = new Player(myPlayerId, 50, canvas.height - GRASS_HEIGHT - 150, 75, 75, playerIcon, playerName); // Start players higher
+      controllers[myPlayerId] = new Controller(myPlayerId); // Create a controller for this player
+      gameStarted = true;
+
+      // Notify server about new player
+      socket.send(JSON.stringify({ type: 'newPlayer', name: playerName, icon: playerIconHTML, id: myPlayerId }));
+
+      // Set interval for game loop
+      requestAnimationFrame(gameLoop);
+    });
+
+    // Game loop
+    function gameLoop() {
+      const localPlayer = players[myPlayerId];
+  if (gameStarted) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+      // Spawn new clouds
+  spawnClouds();
+
+// Update and draw all clouds
+updateClouds();
+
+windblowers.forEach((blower) => {
+      blower.applyEffect(localPlayer); // Apply wind effect to the player
+      blower.draw(); // Draw the windblower area (optional)
+    });
+
+    drawSpikes(cameraX, cameraY); // Spikes are drawn relative to the camera's X position
+
+// Check if the player collides with the spikes
+if (checkForSpikeCollision(localPlayer)) {
+  // Reset the player to the starting position
+  resetPlayerPosition(localPlayer);
+  console.log("Player hit the spikes! Resetting to start.");
+}
+
+
+    // Draw grass at the bottom
+    if (localPlayer && localPlayer.y + localPlayer.h < canvas.height) {
+
+// 1. Draw the Dirt Layer (beneath the grass)
+ctx.fillStyle = '#9b7a4b'; // Solid brown color for the dirt
+ctx.fillRect(0, groundLevel - cameraY + 20, canvas.width, GRASS_HEIGHT - 20); // Draw dirt just below the grass
+
+// 2. Draw the Grass Layer (with a gradient effect)
+const grassGradient = ctx.createLinearGradient(0, groundLevel - cameraY, 0, groundLevel - cameraY + GRASS_HEIGHT);
+grassGradient.addColorStop(0, '#6b8e23'); // Dark green at the bottom
+grassGradient.addColorStop(1, '#9acd32'); // Lighter green at the top
+ctx.fillStyle = grassGradient; // Apply gradient
+ctx.fillRect(0, groundLevel - cameraY, canvas.width, GRASS_HEIGHT); // Draw grass
+}
+
+    
+
+    // Update camera position based on the local player
+    if (localPlayer) {
+      cameraX = localPlayer.x - canvas.width / 2 + localPlayer.w / 2; // Center camera on the player in X
+      if (localPlayer.y < canvas.height / 2) {
+        cameraY = localPlayer.y - canvas.height / 2 + localPlayer.h / 2; // Center camera on the player in Y
+      } else {
+        cameraY = localPlayer.y - canvas.height / 2 + localPlayer.h / 2; // Keep the camera centered if player is above half the page
+      }
+    }
+
+    // Update and draw parkour objects
+    parkourObjects.forEach((obj) => {
+      obj.update();
+    });
+
+    // Update and draw all players, excluding the local player
+    for (let id in players) {
+      if (id === myPlayerId) continue; // Skip drawing the local player
+
+      let player = players[id];
+      console.log(player);
+      ctx.globalAlpha = player.opacity; // Set opacity for drawing
+          ctx.drawImage(document.getElementById("hawk"), player.x - cameraX, player.y - cameraY, player.w, player.h);
+
+          // Draw the player's name above the character
+          ctx.fillStyle = 'black';
+          ctx.font = '16px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(player.name, player.x - cameraX + player.w / 2, player.y - cameraY - 10); // Positioning the name above the player
+    }
+
+    // Handle local player input and movement
+    if (localPlayer) {
+      localPlayer.speedX = 0; // Reset speed on each frame
+      const controller = controllers[myPlayerId]; // Get the controller for the local player
+
+      // Apply movement based on controller input
+      if (controller.right) { localPlayer.speedX = 7; }
+      if (controller.left) { localPlayer.speedX = -7; }
+      if (controller.up) { localPlayer.jump(); }
+
+      localPlayer.update(parkourObjects); // Update the local player's position
+      localPlayer.draw(); // Draw the local player
+
+      // Send position update to the server
+      socket.send(JSON.stringify({ type: 'positionUpdate', id: myPlayerId, x: localPlayer.x, y: localPlayer.y, name: playerName, icon: playerIconHTML }));
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+}
+
+
+    // Resize canvas on window resize
+    window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  // Update the ground height based on new canvas height
+  const groundLevel = canvas.height - GRASS_HEIGHT;
+
+  // Adjust each parkour object's y-position
+  parkourObjects.forEach((obj, index) => {
+    obj.y = groundLevel - (index + 1) * 50; // This is an example; adjust based on your desired layout
+  });
+
+  // Also update the players' positions if needed, to ensure they stay on the ground
+  for (let id in players) {
+    const player = players[id];
+    if (player.y + player.h > groundLevel) {
+      player.y = groundLevel - player.h;
+      player.speedY = 0;
+    }
+  }
+});
+
+  </script>
+</body>
+</html>
