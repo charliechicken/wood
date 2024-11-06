@@ -48,7 +48,10 @@
       <!-- Add more icons as needed -->
     </div>
     <embed loop="true" src="bgmusic.mp3" hidden="true" type="video/quicktime"></embed>
-
+    <audio id="backgroundMusic" loop>
+    <source src="bgmusic.mp3" type="audio/mp3">
+    Your browser does not support the audio element.
+    </audio>
     <img src="ground.png" id="ground">
     <button id="startGameButton" disabled>Start Game</button>
   </div>
@@ -59,6 +62,11 @@
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+
+        window.onload = function() {
+        var audio = document.getElementById("backgroundMusic");
+        audio.play(); // Start playing the audio
+    };
 
     const GRASS_HEIGHT = canvas.height/2 - 37.5; // Height of the grass section
 
