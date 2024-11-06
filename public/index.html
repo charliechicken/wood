@@ -317,13 +317,14 @@ const parkourObjects = [
   new ParkourObject("platform_inner_repeating.png", 3700, canvas.height - GRASS_HEIGHT - 1150, 75, 75, 'brown'),
   new ParkourObject("platform_inner_repeating.png", 3900, canvas.height - GRASS_HEIGHT - 1200, 75, 75, 'brown'),
   new ParkourObject("platform_inner_repeating.png", 4000, canvas.height - GRASS_HEIGHT - 1350, 75, 75, 'brown'),
+  new ParkourOjbect("platform_inner_repeating.png", -150, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'yellow'),
 
   // New unique path beyond the last one
   new ParkourObject("platform_inner_repeating.png", 4200, canvas.height - GRASS_HEIGHT - 1400, 75, 75, 'brown', true, 4200, 4500, 3), // Moving horizontally
   new ParkourObject("platform_inner_repeating.png", 4500, canvas.height - GRASS_HEIGHT - 1500, 75, 75, 'brown'), // Stationary
   new ParkourObject("platform_inner_repeating.png", 4700, canvas.height - GRASS_HEIGHT - 1600, 75, 75, 'brown', true, 4700, 5100, 7), // Fast-moving platform
   new ParkourObject("platform_inner_repeating.png", 5000, canvas.height - GRASS_HEIGHT - 1700, 75, 75, 'brown', true, 5000, 5200, 4, true), // Diagonal moving platform
-  new ParkourObject("platform_inner_repeating.png", 5300, canvas.height - GRASS_HEIGHT - 1800, 75, 75, 'brown'), // Stationary high platform
+  new ParkourObject("platform_inner_repeating.png", 5300, canvas.height - GRASS_HEIGHT - 1800, 75, 75, 'brown', true, 5200, 5400, 6, true), // Stationary high platform
   new ParkourObject("platform_inner_repeating.png", 5600, canvas.height - GRASS_HEIGHT - 1900, 75, 75, 'brown', true, 5500, 5800, 5), // Large, slow-moving platform
   new ParkourObject("platform_inner_repeating.png", 5900, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'), // Final high stationary platform
 ];
@@ -527,8 +528,9 @@ class WindBlower {
 }
 
 const windblowers = [
-  new WindBlower(1000, canvas.height - GRASS_HEIGHT - 200, 200, 50, -200), // A windblower that pushes the player upwards
+  new WindBlower(1000, canvas.height - GRASS_HEIGHT - 200, 200, 50, -15), // A windblower that pushes the player upwards
   new WindBlower(2200, canvas.height - GRASS_HEIGHT - 350, 200, 50, -20), // Another windblower
+  new Windblower(-100, canvas.height - GRASS-HEIGHT - 2000, 200, 50, 200)
 ];
 
 
