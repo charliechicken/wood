@@ -65,14 +65,23 @@
      // Get the audio element
 const backgroundMusic = document.getElementById("backgroundMusic");
 
-// Set the audio to play when the game loads
-backgroundMusic.play();
+const startButton = document.getElementById("startButton");
 
-// Set volume (0.0 to 1.0) if you want to control loudness
-backgroundMusic.volume = 0.2;
+// Start the game and play background music after button click
+startButton.addEventListener("click", () => {
+    backgroundMusic.play()
+      backgroundMusic.volume = 0.2;
 
 // Ensure it loops
 backgroundMusic.loop = true;
+        .then(() => {
+            startButton.style.display = "none";
+        })
+        .catch(error => {
+            console.error("Failed to play background music:", error);
+        });
+});
+
 
 
     const GRASS_HEIGHT = canvas.height/2 - 37.5; // Height of the grass section
