@@ -469,16 +469,17 @@ const windblowers = [
     const controllers = {};
 
     // WebSocket connection
-    const socket = new WebSocket(`wss://${window.location.host}`);
+    //const socket = new WebSocket(`wss://${window.location.host}`);
 
-    socket.addEventListener('open', () => {
-      console.log('WebSocket connection established');
-    });
+    //socket.addEventListener('open', () => {
+      //console.log('WebSocket connection established');
+    //});
 
     // Listen for messages
     const players = {};
 
 // Handle incoming messages from the server
+    /*
 socket.onmessage = (event) => {
   // Check if event.data is already a string
   let messageText = '';
@@ -525,7 +526,7 @@ function handleMessage(text) {
   }
 }
 
-
+*/
 
 
 
@@ -557,7 +558,7 @@ function handleMessage(text) {
       gameStarted = true;
 
       // Notify server about new player
-      socket.send(JSON.stringify({ type: 'newPlayer', name: playerName, icon: playerIconHTML, id: myPlayerId }));
+      //socket.send(JSON.stringify({ type: 'newPlayer', name: playerName, icon: playerIconHTML, id: myPlayerId }));
 
       // Set interval for game loop
       requestAnimationFrame(gameLoop);
@@ -652,7 +653,7 @@ ctx.fillRect(0, groundLevel - cameraY, canvas.width, GRASS_HEIGHT); // Draw gras
       localPlayer.draw(); // Draw the local player
 
       // Send position update to the server
-      socket.send(JSON.stringify({ type: 'positionUpdate', id: myPlayerId, x: localPlayer.x, y: localPlayer.y, name: playerName, icon: playerIconHTML }));
+      //socket.send(JSON.stringify({ type: 'positionUpdate', id: myPlayerId, x: localPlayer.x, y: localPlayer.y, name: playerName, icon: playerIconHTML }));
     }
 
     requestAnimationFrame(gameLoop);
