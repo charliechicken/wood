@@ -63,24 +63,25 @@
     canvas.height = window.innerHeight;
 
      // Get the audio element
+// Get the audio element and start button
 const backgroundMusic = document.getElementById("backgroundMusic");
-
 const startButton = document.getElementById("startButton");
 
 // Start the game and play background music after button click
 startButton.addEventListener("click", () => {
-    backgroundMusic.play()
-      backgroundMusic.volume = 0.2;
+    backgroundMusic.volume = 0.2; // Set volume
+    backgroundMusic.loop = true;  // Ensure it loops
 
-// Ensure it loops
-backgroundMusic.loop = true;
+    backgroundMusic.play() // Play the audio
         .then(() => {
+            // Hide the start button after music starts
             startButton.style.display = "none";
         })
         .catch(error => {
             console.error("Failed to play background music:", error);
         });
 });
+
 
 
 
