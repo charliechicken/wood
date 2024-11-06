@@ -32,6 +32,15 @@
     #iconSelection img.selected {
       border: 2px solid blue;
     }
+    /* Style for the YouTube video in the top left corner */
+    #youtubeContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 300px;
+      height: 170px;
+      z-index: 20;
+    }
   </style>
 </head>
 <body>
@@ -43,18 +52,25 @@
       <img src="hawktuah.png" alt="Icon 1" class="icon" data-icon="hawktuah.png" id="hawk">
       <img src="troll.webp" alt="Icon 2" class="icon" data-icon="troll.webp" id="troll">
       <img src="spongbob.png" alt="Icon 3" class="icon" data-icon="spongbob.png" id="spongbob">
-      <img src="stephen.jpeg" alt="Icon 2" class="icon" data-icon="stephen.jpeg" id="stephen">
-      <img src="daring.jpeg" alt="Icon 3" class="icon" data-icon="daring.jpeg" id="daring">
-      <!-- Add more icons as needed -->
+      <img src="stephen.jpeg" alt="Icon 4" class="icon" data-icon="stephen.jpeg" id="stephen">
+      <img src="daring.jpeg" alt="Icon 5" class="icon" data-icon="daring.jpeg" id="daring">
     </div>
-    <embed loop="true" src="bgmusic.mp3" hidden="true" type="video/quicktime"></embed>
-    <!-- No visible audio controls, we control it via JavaScript -->
-<audio id="backgroundMusic" src="bgmusic.mp3" loop></audio>
 
+    <h3>Enter a YouTube Link</h3>
+    <input type="text" id="youtubeLinkInput" placeholder="YouTube Video Link" />
+    <button id="loadYouTubeButton">Load Video</button>
+    
+    <audio id="backgroundMusic" src="bgmusic.mp3" loop></audio>
     <img src="ground.png" id="ground">
     <button id="startGameButton" disabled>Start Game</button>
   </div>
+
   <canvas id="gameCanvas"></canvas>
+  
+  <!-- Container for the YouTube video -->
+  <div id="youtubeContainer">
+    <iframe id="youtubePlayer" width="300" height="170" frameborder="0" allowfullscreen></iframe>
+  </div>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
@@ -62,24 +78,40 @@
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-document.addEventListener("DOMContentLoaded", () => {
-    const backgroundMusic = document.getElementById("backgroundMusic");
-    const startButton = document.getElementById("startGameButton");
+    document.addEventListener("DOMContentLoaded", () => {
+        const backgroundMusic = document.getElementById("backgroundMusic");
+        const startButton = document.getElementById("startGameButton");
+        const youtubeLinkInput = document.getElementById("youtubeLinkInput");
+        const loadYouTubeButton = document.getElementById("loadYouTubeButton");
+        const youtubePlayer = document.getElementById("youtubePlayer");
 
-    startButton.addEventListener("click", () => {
-        backgroundMusic.volume = 0.2; // Set volume
-        backgroundMusic.loop = true;  // Ensure it loops
+        // Start game button event
+        startButton.addEventListener("click", () => {
+            backgroundMusic.volume = 0.2; // Set volume
+            backgroundMusic.loop = true;  // Ensure it loops
+            backgroundMusic.play()
+                .then(() => {
+                    startButton.style.display = "none"; // Hide start button
+                })
+                .catch(error => {
+                    console.error("Failed to play background music:", error);
+                });
+        });
 
-        backgroundMusic.play() // Play the audio
-            .then(() => {
-                // Hide the start button after music starts
-                startButton.style.display = "none";
-            })
-            .catch(error => {
-                console.error("Failed to play background music:", error);
-            });
+        // Load YouTube video from the link provided
+        loadYouTubeButton.addEventListener("click", () => {
+            const youtubeUrl = youtubeLinkInput.value;
+            if (youtubeUrl) {
+                // Extract the video ID from the YouTube URL
+                const videoId = youtubeUrl.split("v=")[1];
+                if (videoId) {
+                    youtubePlayer.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+                } else {
+                    alert("Invalid YouTube URL");
+                }
+            }
+        });
     });
-});
 
 
 
