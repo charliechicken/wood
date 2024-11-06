@@ -61,7 +61,6 @@
     <button id="loadYouTubeButton">Load Video</button>
     
     <audio id="backgroundMusic" src="bgmusic.mp3" loop></audio>
-    <img src="ground.png" id="ground">
     <button id="startGameButton" disabled>Start Game</button>
   </div>
 
@@ -69,7 +68,7 @@
   
   <!-- Container for the YouTube video -->
   <div id="youtubeContainer">
-    <iframe id="youtubePlayer" width="300" height="170" frameborder="0" allowfullscreen></iframe>
+    <iframe id="youtubePlayer" width="400" height="300" frameborder="0" allowfullscreen></iframe>
   </div>
 
   <script>
@@ -127,9 +126,6 @@
     let cameraX = 0; // Camera position on the X-axis
     let cameraY = 0;
     const groundLevel = canvas.height - GRASS_HEIGHT; // Fixed ground level
-    const groundImage = new Image();
-groundImage.src = 'ground.png'; // Path to the ground image
-
 
     class Player {
       constructor(id, x, y, w, h, spritePath, name, opacity = 1) {
@@ -317,7 +313,24 @@ const parkourObjects = [
   new ParkourObject("platform_inner_repeating.png", 3700, canvas.height - GRASS_HEIGHT - 1150, 75, 75, 'brown'),
   new ParkourObject("platform_inner_repeating.png", 3900, canvas.height - GRASS_HEIGHT - 1200, 75, 75, 'brown'),
   new ParkourObject("platform_inner_repeating.png", 4000, canvas.height - GRASS_HEIGHT - 1350, 75, 75, 'brown'),
-  new ParkourObject("platform_inner_repeating.png", -950, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'yellow'),
+
+  new ParkourObject("platform_inner_repeating.png", -1275, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -1350, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -1425, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -1500, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -1575, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -1650, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -1725, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -1800, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -1875, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -1950, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -2025, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -2100, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -2175, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -2250, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("platform_inner_repeating.png", -2325, canvas.height - GRASS_HEIGHT - 33300, 75, 75, 'yellow'),
+  new ParkourObject("stephen.jpeg", -2325, canvas.height - GRASS_HEIGHT - 33800, 200, 200, 'yellow'),
+
 
   // New unique path beyond the last one
   new ParkourObject("platform_inner_repeating.png", 4200, canvas.height - GRASS_HEIGHT - 1400, 75, 75, 'brown', true, 4200, 4500, 3), // Moving horizontally
@@ -530,8 +543,7 @@ class WindBlower {
 const windblowers = [
   new WindBlower(1000, canvas.height - GRASS_HEIGHT - 200, 200, 50, -15), // A windblower that pushes the player upwards
   new WindBlower(2200, canvas.height - GRASS_HEIGHT - 350, 200, 50, -20), // Another windblower
-  new WindBlower(0, GRASS_HEIGHT, 200, 50, -20),
-  new WindBlower(0, canvas.height, 200, 50, -20),
+  new WindBlower(-1000, GRASS_HEIGHT, 200, 50, -200),
 ];
 
 
