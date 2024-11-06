@@ -530,7 +530,8 @@ class WindBlower {
 const windblowers = [
   new WindBlower(1000, canvas.height - GRASS_HEIGHT - 200, 200, 50, -15), // A windblower that pushes the player upwards
   new WindBlower(2200, canvas.height - GRASS_HEIGHT - 350, 200, 50, -20), // Another windblower
-  new WindBlower(0, canvas.height - GRASS_HEIGHT, 200, 50, -20),
+  new WindBlower(0, GRASS_HEIGHT, 200, 50, -20),
+  new WindBlower(0, canvas.height, 200, 50, -20),
 ];
 
 
