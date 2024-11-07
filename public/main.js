@@ -260,6 +260,13 @@ const parkourObjects = [
     new ParkourObject("platform_inner_repeating.png", 5300, canvas.height - GRASS_HEIGHT - 1800, 75, 75, 'brown', true, 5200, 5400, 6, true),
     new ParkourObject("platform_inner_repeating.png", 5600, canvas.height - GRASS_HEIGHT - 1900, 75, 75, 'brown', true, 5500, 5800, 5),
     new ParkourObject("platform_inner_repeating.png", 5900, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
+    new ParkourObject("platform_inner_repeating.png", 5975, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
+    new ParkourObject("platform_inner_repeating.png", 6050, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
+    new ParkourObject("platform_inner_repeating.png", 6125, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
+    new ParkourObject("platform_inner_repeating.png", 6200, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
+    new ParkourObject("platform_inner_repeating.png", 6275, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
+    new ParkourObject("platform_inner_repeating.png", 6350, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
+    new ParkourObject("platform_inner_repeating.png", 6425, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
 ];
 
 const cloudImage = new Image();
