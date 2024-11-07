@@ -202,7 +202,7 @@ class Controller {
 
         let keyEvent = (e) => {
             if (this.playerId === myPlayerId) {
-                if (e.code === "KeyW" || e.code === "ArrowUp") {
+                if (e.code === "KeyW" || e.code === "ArrowUp" || e.code === "Space") {
                     this.up = e.type === 'keydown';
                 }
                 if (e.code === "KeyD" || e.code === "ArrowRight") {
