@@ -474,14 +474,14 @@ document.getElementById('startGameButton').addEventListener('click', () => {
 });
 
 class Enemy {
-    constructor(id, x, y, w, h, spritePath) {
-        this.id = id; // The enemy's name will be the id
+    constructor(id, x, y, w, h, spritePath, minX, maxX, minY, maxY, detectionRadius) {
+        this.id = id;
         this.x = x;
         this.y = y;
         this.w = w;
         this.h = h;
         this.speedX = 3;
-        this.speedY = .5;
+        this.speedY = 0.5;
         this.sprite = new Image();
         this.sprite.src = spritePath;
         this.loaded = false;
@@ -489,6 +489,15 @@ class Enemy {
         this.lastShot = 0;
         this.initialX = x;  // Store initial position for reset
         this.initialY = y;  // Store initial position for reset
+
+        // Define boundaries for the enemy's movement
+        this.minX = minX;
+        this.maxX = maxX;
+        this.minY = minY;
+        this.maxY = maxY;
+
+        // Define detection radius for shooting
+        this.detectionRadius = detectionRadius;
 
         this.sprite.onload = () => {
             this.loaded = true;
@@ -508,23 +517,27 @@ class Enemy {
     }
 
     update(player) {
-        // Basic following behavior
-        if (player.x > this.x) this.x += this.speedX;
-        else if (player.x < this.x) this.x -= this.speedX;
+        // Basic following behavior (within boundaries)
+        if (player.x > this.x && this.x < this.maxX) this.x += this.speedX;
+        else if (player.x < this.x && this.x > this.minX) this.x -= this.speedX;
 
-        // Gravity
-        this.y += this.speedY;
+        if (this.y < this.maxY) this.y += this.speedY; // Apply gravity until the maxY
 
-        // Simple collision with ground
+        // Gravity and simple collision with ground
         if (this.y + this.h > groundLevel) {
             this.y = groundLevel - this.h;
             this.speedY = 0;
         }
 
-        // Shooting
-        if (Date.now() - this.lastShot > this.reloadTime) {
-            this.shoot(player);
-            this.lastShot = Date.now();
+        // Check the distance from the player
+        const distanceToPlayer = Math.sqrt(Math.pow(this.x - player.x, 2) + Math.pow(this.y - player.y, 2));
+
+        // If the distance to the player is less than the detection radius, start shooting
+        if (distanceToPlayer <= this.detectionRadius) {
+            if (Date.now() - this.lastShot > this.reloadTime) {
+                this.shoot(player);
+                this.lastShot = Date.now();
+            }
         }
 
         this.draw();
@@ -558,6 +571,14 @@ class Projectile {
         this.x += this.speedX;
         this.y += this.speedY;
 
+        // Check if projectile exceeds certain distance from enemy (despawn condition)
+        const enemy = enemies.find(enemy => 
+            Math.abs(enemy.x - this.x) < 100 && Math.abs(enemy.y - this.y) < 100
+        );
+        if (enemy && (Math.abs(this.x - enemy.x) > 500 || Math.abs(this.y - enemy.y) > 500)) {
+            return;  // If projectile is too far from the enemy, don't render it
+        }
+
         // Check for collision with player
         if (players[myPlayerId] && this.collidesWith(players[myPlayerId])) {
             handlePlayerDeath(); // Reset player when hit by projectile
@@ -581,6 +602,16 @@ class Projectile {
         );
     }
 }
+
+// Instantiate enemies with defined boundaries and detection radius
+const enemies = [
+    new Enemy('GAYSONGURNS1', 1000, canvas.height - GRASS_HEIGHT - 200, 75, 75, 'enemySprite.jpeg', 500, 1500, 0, groundLevel - 100, 500),
+    new Enemy('GAYSONGURNS2', 1500, canvas.height - GRASS_HEIGHT - 600, 75, 75, 'enemySprite.jpeg', 1000, 2000, 0, groundLevel - 100, 500),
+    new Enemy('GAYSONGURNS3', 3000, canvas.height - GRASS_HEIGHT - 800, 75, 75, 'enemySprite.jpeg', 3500, 4500, 0, groundLevel - 100, 500),
+    new Enemy('GAYSONGURNS4', 4000, canvas.height - GRASS_HEIGHT - 1700, 75, 75, 'enemySprite.jpeg', 3500, 4500, 0, groundLevel - 100, 500),
+    new Enemy('GAYSONGURNS5', 5500, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'enemySprite.jpeg', 5000, 6000, 0, groundLevel - 100, 500),
+    new Enemy('GAYSONGURNS6', 6000, canvas.height - GRASS_HEIGHT - 2300, 75, 75, 'enemySprite.jpeg', 5500, 6500, 0, groundLevel - 100, 500),
+];
 
 // Function to reset the game when the player dies (including enemies and projectiles)
 function resetGame() {
@@ -628,15 +659,8 @@ function checkForDeathConditions() {
     }
 }
 
-// Instantiate enemies
-const enemies = [
-    new Enemy('GAYSONGURNS1', 1000, canvas.height - GRASS_HEIGHT - 200, 75, 75, 'enemySprite.jpeg'),
-    new Enemy('GAYSONGURNS2', 1500, canvas.height - GRASS_HEIGHT - 600, 75, 75, 'enemySprite.jpeg'),
-    new Enemy('GAYSONGURNS3', 4000, canvas.height - GRASS_HEIGHT - 450, 75, 75, 'enemySprite.jpeg'),
-    new Enemy('GAYSONGURNS4', 4000, canvas.height - GRASS_HEIGHT - 1350, 75, 75, 'enemySprite.jpeg'),
-    new Enemy('GAYSONGURNS5', 5500, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'enemySprite.jpeg'),
-    new Enemy('GAYSONGURNS4', 6000, canvas.height - GRASS_HEIGHT - 2300, 75, 75, 'enemySprite.jpeg'),
-];
+
+
 
 const projectiles = [];
 
