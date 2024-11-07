@@ -617,7 +617,6 @@ const enemies = [
     new Enemy('GAYSONGURNS3', 3000, canvas.height - GRASS_HEIGHT - 800, 75, 75, 'enemySprite.jpeg', 3500, 4500, 0, groundLevel - 100, 500),
     new Enemy('GAYSONGURNS4', 4000, canvas.height - GRASS_HEIGHT - 1700, 75, 75, 'enemySprite.jpeg', 3500, 4500, 0, groundLevel - 100, 500),
     new Enemy('GAYSONGURNS5', 5500, canvas.height - GRASS_HEIGHT - 2450, 75, 75, 'enemySprite.jpeg', 5000, 6000, 0, groundLevel - 100, 500),
-    new Enemy('GAYSONGURNS6', 6500, canvas.height - GRASS_HEIGHT - 2800, 75, 75, 'enemySprite.jpeg', 6000, 7000, 0, groundLevel - 100, 500),
 ];
 
 // Function to reset the game when the player dies (including enemies and projectiles)
