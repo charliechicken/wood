@@ -475,13 +475,13 @@ document.getElementById('startGameButton').addEventListener('click', () => {
 
 class Enemy {
     constructor(id, x, y, w, h, spritePath) {
-        this.id = id;
+        this.id = id; // The enemy's name will be the id
         this.x = x;
         this.y = y;
         this.w = w;
         this.h = h;
-        this.speedX = 2;
-        this.speedY = 0;
+        this.speedX = 3;
+        this.speedY = .5;
         this.sprite = new Image();
         this.sprite.src = spritePath;
         this.loaded = false;
@@ -498,6 +498,12 @@ class Enemy {
     draw() {
         if (this.loaded) {
             ctx.drawImage(this.sprite, this.x - cameraX, this.y - cameraY, this.w, this.h);
+
+            // Draw enemy id (name) above the enemy
+            ctx.fillStyle = 'red';
+            ctx.font = '20px serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.id, this.x - cameraX + this.w / 2, this.y - cameraY - 10); // Positioning the name above the enemy
         }
     }
 
@@ -525,13 +531,11 @@ class Enemy {
     }
 
     shoot(player) {
-        console.log(`Enemy ${this.id} shooting!`);  // Add this log to see if the second enemy is triggering the shoot function
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
-        const speed = 3;
+        const speed = 3.4;
         const projectile = new Projectile(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed);
         projectiles.push(projectile);
     }
-    
 
     // Reset enemy's position and clear projectiles
     reset() {
@@ -626,10 +630,12 @@ function checkForDeathConditions() {
 
 // Instantiate enemies
 const enemies = [
-    new Enemy('enemy1', 1000, canvas.height - GRASS_HEIGHT - 200, 75, 75, 'enemySprite.jpeg'),
-    new Enemy('enemy2', 1500, canvas.height - GRASS_HEIGHT - 600, 75, 75, 'enemySprite.jpeg'),
-    new Enemy('enemy3', 4000, canvas.height - GRASS_HEIGHT - 450, 75, 75, 'enemySprite.jpeg'),
-    new Enemy('enemy4', 4000, canvas.height - GRASS_HEIGHT - 1350, 75, 75, 'enemySprite.jpeg'),
+    new Enemy('GAYSONGURNS1', 1000, canvas.height - GRASS_HEIGHT - 200, 75, 75, 'enemySprite.jpeg'),
+    new Enemy('GAYSONGURNS2', 1500, canvas.height - GRASS_HEIGHT - 600, 75, 75, 'enemySprite.jpeg'),
+    new Enemy('GAYSONGURNS3', 4000, canvas.height - GRASS_HEIGHT - 450, 75, 75, 'enemySprite.jpeg'),
+    new Enemy('GAYSONGURNS4', 4000, canvas.height - GRASS_HEIGHT - 1350, 75, 75, 'enemySprite.jpeg'),
+    new Enemy('GAYSONGURNS5', 5500, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'enemySprite.jpeg'),
+    new Enemy('GAYSONGURNS4', 6000, canvas.height - GRASS_HEIGHT - 2300, 75, 75, 'enemySprite.jpeg'),
 ];
 
 const projectiles = [];
