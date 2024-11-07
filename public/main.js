@@ -3,6 +3,10 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+var spawnX = 50;
+const GRASS_HEIGHT = canvas.height / 2 - 37.5;
+var spawnY = canvas.height - GRASS_HEIGHT - 150;
+
 document.addEventListener("DOMContentLoaded", () => {
     const backgroundMusic = document.getElementById("backgroundMusic");
     const startButton = document.getElementById("startGameButton");
@@ -36,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-const GRASS_HEIGHT = canvas.height / 2 - 37.5;
+
 
 let playerName = "";
 let playerIcon = "";
@@ -389,8 +393,8 @@ function checkForSpikeCollision(player) {
 }
 
 function resetPlayerPosition(player) {
-    player.x = 50;
-    player.y = canvas.height - GRASS_HEIGHT - 150;
+    player.x = spawnX;
+    player.y = spawnY;
     player.speedX = 0;
     player.speedY = 0;
     player.jumpCount = 0;
@@ -478,7 +482,6 @@ class Enemy {
         this.h = h;
         this.speedX = 2;
         this.speedY = 0;
-        this.gravity = 0.6;
         this.sprite = new Image();
         this.sprite.src = spritePath;
         this.loaded = false;
@@ -505,7 +508,6 @@ class Enemy {
 
         // Gravity
         this.y += this.speedY;
-        this.speedY += this.gravity;
 
         // Simple collision with ground
         if (this.y + this.h > groundLevel) {
@@ -523,13 +525,13 @@ class Enemy {
     }
 
     shoot(player) {
+        console.log(`Enemy ${this.id} shooting!`);  // Add this log to see if the second enemy is triggering the shoot function
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
-        const speed = 3; // Reduced speed for the projectiles
+        const speed = 3;
         const projectile = new Projectile(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed);
-        
-        // Add to global projectiles array
         projectiles.push(projectile);
     }
+    
 
     // Reset enemy's position and clear projectiles
     reset() {
@@ -600,8 +602,8 @@ function handlePlayerDeath() {
 // Function to reset the player's position
 function resetPlayerPosition(player) {
     // Set the player's position back to the starting position or spawn point
-    player.x = 100;  // Adjust this to the player's spawn position
-    player.y = groundLevel - player.h;  // Adjust this to the ground level
+    player.x = spawnX;  // Adjust this to the player's spawn position
+    player.y = spawnY;  // Adjust this to the ground level
     player.health = 100;  // Reset health or other status variables
 }
 
@@ -624,8 +626,10 @@ function checkForDeathConditions() {
 
 // Instantiate enemies
 const enemies = [
-    new Enemy('enemy1', 1000, groundLevel - 75, 75, 75, 'enemySprite.png'),
-    new Enemy('enemy2', 3000, groundLevel - 300, 75, 75, 'enemySprite.png')
+    new Enemy('enemy1', 1000, canvas.height - GRASS_HEIGHT - 200, 75, 75, 'enemySprite.jpeg'),
+    new Enemy('enemy2', 1500, canvas.height - GRASS_HEIGHT - 600, 75, 75, 'enemySprite.jpeg'),
+    new Enemy('enemy3', 4000, canvas.height - GRASS_HEIGHT - 450, 75, 75, 'enemySprite.jpeg'),
+    new Enemy('enemy4', 4000, canvas.height - GRASS_HEIGHT - 1350, 75, 75, 'enemySprite.jpeg'),
 ];
 
 const projectiles = [];
@@ -680,10 +684,7 @@ function gameLoop() {
         projectiles.forEach((projectile, index) => {
             projectile.update();
 
-            // Remove projectile if out of bounds
-            if (projectile.x < 0 || projectile.x > canvas.width || projectile.y < 0 || projectile.y > canvas.height) {
-                projectiles.splice(index, 1);
-            }
+
         });
 
         for (let id in players) {
