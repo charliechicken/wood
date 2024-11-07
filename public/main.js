@@ -161,7 +161,7 @@ class Player {
 }
 
 class ParkourObject {
-    constructor(img, x, y, w, h, color, isMoving = false, minX = 0, maxX = 0, speed = 0) {
+    constructor(img, x, y, w, h, color, isMoving = false, minX = 0, maxX = 0, speed = 0, isTeleporter = false, teleportX = 0, teleportY = 0) {
         this.img = new Image();
         this.img.src = img;
         this.x = x;
@@ -174,24 +174,56 @@ class ParkourObject {
         this.maxX = maxX;
         this.speed = speed;
         this.direction = 1;
+        this.isTeleporter = isTeleporter;
+        this.teleportX = teleportX;
+        this.teleportY = teleportY;
+        this.teleported = false; // New flag to track teleportation state
     }
 
-    update() {
+    // Collision detection method for the parkour object
+    collidesWith(player) {
+        return player.x < this.x + this.w &&
+               player.x + player.w > this.x &&
+               player.y < this.y + this.h &&
+               player.y + player.h > this.y;
+    }
+    
+
+    update(player) {
+        // Handle moving objects
         if (this.isMoving) {
             this.x += this.speed * this.direction;
-
+    
             if (this.x <= this.minX || this.x + this.w >= this.maxX) {
                 this.direction *= -1;
             }
         }
+    
+        // Check for teleportation collision
+        if (this.isTeleporter && this.collidesWith(player) && !this.teleported) {
+            // If the player collides with the teleporter and hasn't been teleported yet
+            player.x = this.teleportX;
+            player.y = this.teleportY;
+            this.teleported = true;  // Set the flag to prevent further teleportations until the player moves away
+            console.log("Player teleported to: " + this.teleportX + ", " + this.teleportY);
+        }
+    
+        // If player moves away from the teleporter, reset the teleport flag
+        if (!this.collidesWith(player) && this.teleported) {
+            this.teleported = false; // Only reset the flag if the player was previously teleported
+        }
+    
+        // Draw the parkour object
         this.draw();
     }
+    
 
     draw() {
         ctx.fillStyle = this.color;
         ctx.drawImage(this.img, this.x - cameraX, this.y - cameraY, this.w, this.h);
     }
 }
+
 
 class Controller {
     constructor(playerId) {
@@ -267,6 +299,7 @@ const parkourObjects = [
     new ParkourObject("platform_inner_repeating.png", 6275, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
     new ParkourObject("platform_inner_repeating.png", 6350, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
     new ParkourObject("platform_inner_repeating.png", 6425, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
+    new ParkourObject("portal_sprite.png", -150, canvas.height - GRASS_HEIGHT - 150, 125, 150, 'blue', false, 0, 0, 0, true, 8000, canvas.height - GRASS_HEIGHT - 300),
 ];
 
 const cloudImage = new Image();
@@ -674,12 +707,13 @@ const projectiles = [];
 function gameLoop() {
     const localPlayer = players[myPlayerId];
 
-    if (gameStarted) {
+    if (gameStarted && localPlayer) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         spawnClouds();
         updateClouds();
 
+        // Apply windblowers effects
         windblowers.forEach((blower) => {
             blower.applyEffect(localPlayer);
             blower.draw();
@@ -701,33 +735,32 @@ function gameLoop() {
             ctx.fillRect(0, groundLevel - cameraY, canvas.width, GRASS_HEIGHT);
         }
 
+        // Update camera position
         if (localPlayer) {
             cameraX = localPlayer.x - canvas.width / 2 + localPlayer.w / 2;
-            if (localPlayer.y < canvas.height / 2) {
-                cameraY = localPlayer.y - canvas.height / 2 + localPlayer.h / 2;
-            } else {
-                cameraY = localPlayer.y - canvas.height / 2 + localPlayer.h / 2;
-            }
+            cameraY = localPlayer.y < canvas.height / 2 
+                ? localPlayer.y - canvas.height / 2 + localPlayer.h / 2 
+                : localPlayer.y - canvas.height / 2 + localPlayer.h / 2;
         }
 
+        // Update parkour objects (pass localPlayer if needed)
         parkourObjects.forEach((obj) => {
-            obj.update();
+            obj.update(localPlayer); // Ensure this is passed correctly
         });
 
+        // Update enemies (passing localPlayer to enemies)
         enemies.forEach(enemy => enemy.update(localPlayer));
 
-        // Update and draw projectiles
+        // Update projectiles
         projectiles.forEach((projectile, index) => {
             projectile.update();
-
-
         });
 
+        // Draw other players
         for (let id in players) {
             if (id === myPlayerId) continue;
 
             let player = players[id];
-            console.log(player);
             ctx.globalAlpha = player.opacity;
             ctx.drawImage(document.getElementById("hawk"), player.x - cameraX, player.y - cameraY, player.w, player.h);
 
@@ -737,6 +770,7 @@ function gameLoop() {
             ctx.fillText(player.name, player.x - cameraX + player.w / 2, player.y - cameraY - 10);
         }
 
+        // Local player controls and update
         if (localPlayer) {
             localPlayer.speedX = 0;
             const controller = controllers[myPlayerId];
@@ -751,13 +785,16 @@ function gameLoop() {
                 localPlayer.jump();
             }
 
-            localPlayer.update(parkourObjects);
+            // Update local player (pass parkourObjects if needed)
+            localPlayer.update(parkourObjects); 
             localPlayer.draw();
         }
 
+        // Continue the game loop
         requestAnimationFrame(gameLoop);
     }
 }
+
 
 
 
