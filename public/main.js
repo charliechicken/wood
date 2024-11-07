@@ -60,7 +60,11 @@ class Player {
         this.h = h;
         this.speedX = 0;
         this.speedY = 0;
+        if(playerIcon != "ray.png") {
         this.gravity = 0.6;
+        } else {
+            this.gravity = 1.5;
+        }
         this.jumpSpeed = -15;
         this.sprite = new Image();
         this.sprite.src = spritePath;
@@ -299,7 +303,7 @@ const parkourObjects = [
     new ParkourObject("platform_inner_repeating.png", 6275, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
     new ParkourObject("platform_inner_repeating.png", 6350, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
     new ParkourObject("platform_inner_repeating.png", 6425, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
-    new ParkourObject("portal_sprite.png", -150, canvas.height - GRASS_HEIGHT - 150, 125, 150, 'blue', false, 0, 0, 0, true, 8000, canvas.height - GRASS_HEIGHT - 300),
+    new ParkourObject("portal_sprite.png", -1510, canvas.height - GRASS_HEIGHT - 150, 125, 150, 'blue', false, 0, 0, 0, true, 8000, canvas.height - GRASS_HEIGHT - 300),
 ];
 
 const cloudImage = new Image();
