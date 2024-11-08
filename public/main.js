@@ -424,7 +424,7 @@ class Message {
         const bgWidth = metrics.width + padding * 2;
         const bgHeight = 25;
         
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillStyle = 'rgba(255,255,255, 0.7)';
         ctx.fillRect(
             player.x + player.w/2 - bgWidth/2 - cameraX,
             player.y - 85 - cameraY,
