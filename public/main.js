@@ -21,7 +21,46 @@ const TIME_STEP = 1 / TARGET_FPS;
 const PARKOUR_OBJECT_SIZE = 75;
 const messages = [];
 
+const GROUND_WIDTH_PERCENTAGE = 40;  // 100% of viewport width
+const GROUND_HEIGHT_PERCENTAGE = 70;   // 50% of viewport height
+
+let lastFrameTime = 0;
+const backgroundElements = [];
+const BIRD_COUNT = 1;
+const BALLOON_COUNT = 1;
+
+const groundImage = new Image();
+groundImage.src = 'ground.png';
+
 document.addEventListener("DOMContentLoaded", () => {
+
+    // Modify bird initialization parameters (around line 38-48)
+for (let i = 0; i < BIRD_COUNT; i++) {
+    backgroundElements.push(new BackgroundElement(
+        'bird.png',
+        Math.random() * canvas.width + canvas.width, // Start from right edge or further
+        Math.random() * (canvas.height * 0.4),
+        100,
+        100,
+        1.5,
+        40,
+        2
+    ));
+}
+
+    for (let i = 0; i < BALLOON_COUNT; i++) {
+        backgroundElements.push(new BackgroundElement(
+            'balloon.png',
+            Math.random() * canvas.width,
+            canvas.height + 100, // Start below the screen
+            120,  // Width
+            160,  // Height
+            0,    // No horizontal speed
+            0,    // No wave amplitude
+            0,    // No wave frequency
+            true  // isBallon flag for special movement
+        ));
+    }
     // Add chat functionality
 document.getElementById('chatInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -254,20 +293,37 @@ class Player {
         };
     }
 
-    draw() {
-        if (this.loaded) {
-            ctx.globalAlpha = this.opacity;
-            ctx.drawImage(this.sprite, this.x - cameraX, this.y - cameraY, this.w, this.h);
-            
-            // Draw player name
-            ctx.fillStyle = 'black';
-            ctx.font = '16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(this.name, this.x - cameraX + this.w / 2, this.y - cameraY - 10);
-            
-            ctx.globalAlpha = 1;
-        }
+   draw() {
+    if (this.loaded) {
+        ctx.globalAlpha = this.opacity;
+        ctx.drawImage(this.sprite, this.x - cameraX, this.y - cameraY, this.w, this.h);
+        
+        // Draw player name
+        ctx.font = '14px Arial';
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x + this.w/2 - cameraX, this.y - 10 - cameraY);
+        
+        // Reset opacity
+        ctx.globalAlpha = 1;
     }
+}
+
+draw() {
+    if (this.loaded) {
+        ctx.globalAlpha = this.opacity;
+        ctx.drawImage(this.sprite, this.x - cameraX, this.y - cameraY, this.w, this.h);
+        
+        // Draw player name
+        ctx.font = '14px Arial';
+        ctx.fillStyle = 'black';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x + this.w/2 - cameraX, this.y - 10 - cameraY);
+        
+        // Reset opacity
+        ctx.globalAlpha = 1;
+    }
+}
 
     update(parkourObjects, deltaTime) {
         // Apply horizontal movement with adjusted speed
@@ -346,13 +402,13 @@ class Message {
         this.duration = duration;
     }
 
-    draw() {
+    draw(ctx) {
         const player = this.playerId === myPlayerId ? localPlayer : players[this.playerId];
         if (!player) return;
 
         ctx.save();
         ctx.font = '16px Arial';
-        ctx.fillStyle = 'white';
+        ctx.fillStyle = 'black';
         ctx.textAlign = 'center';
         
         // Draw text background
@@ -364,17 +420,17 @@ class Message {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(
             player.x + player.w/2 - bgWidth/2 - cameraX,
-            player.y - 45 - cameraY,
+            player.y - 85 - cameraY,
             bgWidth,
             bgHeight
         );
         
         // Draw text
-        ctx.fillStyle = 'white';
+        ctx.fillStyle = 'black';
         ctx.fillText(
             this.text,
             player.x + player.w/2 - cameraX,
-            player.y - 30 - cameraY
+            player.y - 70 - cameraY
         );
         ctx.restore();
     }
@@ -523,8 +579,7 @@ const parkourObjects = [
     new ParkourObject("platform_inner_repeating.png", 6275, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
     new ParkourObject("platform_inner_repeating.png", 6350, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
     new ParkourObject("platform_inner_repeating.png", 6425, canvas.height - GRASS_HEIGHT - 2000, 75, 75, 'brown'),
-    new ParkourObject("portal_sprite.png", -1510, canvas.height - GRASS_HEIGHT - 150, 125, 150, 'blue', false, 0, 0, 0, true, 8000, canvas.height - GRASS_HEIGHT - 300),
-];
+new ParkourObject("portal_sprite.png", 6425, canvas.height - GRASS_HEIGHT - 2075, 125, 150, 'blue', false, 0, 0, 0, true, -1510, canvas.height - GRASS_HEIGHT - 150)];
 
 const cloudImage = new Image();
 cloudImage.src = 'cloud.png';
@@ -873,6 +928,113 @@ const enemies = [
     new Enemy(5500, canvas.height - GRASS_HEIGHT - 2450)
 ];
 
+class BackgroundElement {
+    constructor(imagePath, x, y, width, height, speed, amplitude = 0, frequency = 0, isBalloon = false) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.speed = speed;
+        this.amplitude = amplitude;
+        this.frequency = frequency;
+        this.initialY = y;
+        this.time = Math.random() * Math.PI * 2;
+        this.isBalloon = isBalloon;
+        this.balloonSpeed = 2 + Math.random() * 1; // Random vertical speed for balloons
+        
+        this.image = new Image();
+        this.image.src = imagePath;
+    }
+
+    update(deltaTime) {
+        if (this.isBalloon) {
+            // Balloon specific movement
+            this.y -= this.balloonSpeed;
+            
+            // Reset balloon when it goes off screen
+            if (this.y < -this.height) {
+                this.reset();
+            }
+        } else {
+            // Bird movement
+            this.x -= this.speed * deltaTime * 60;
+            if (this.x + this.width < -cameraX) {
+                this.x = canvas.width - cameraX;
+            }
+            
+            if (this.amplitude > 0) {
+                this.time += this.frequency * deltaTime;
+                this.y = this.initialY + Math.sin(this.time) * this.amplitude;
+            }
+        }
+    }
+
+    reset() {
+        if (this.isBalloon) {
+            this.x = Math.random() * canvas.width;
+            this.y = canvas.height + this.height;
+            this.balloonSpeed = 2 + Math.random() * 1;
+        }
+    }
+
+    draw() {
+        if (this.image.complete) {
+            ctx.drawImage(
+                this.image,
+                this.x,
+                this.y - cameraY * 0.3,
+                this.width,
+                this.height
+            );
+        }
+    }
+}
+
+function manageBackgroundElements() {
+    // Count current birds and balloons
+    const currentBirds = backgroundElements.filter(el => !el.isBalloon).length;
+    const currentBalloons = backgroundElements.filter(el => el.isBalloon).length;
+
+    // Spawn new birds if needed
+    // Spawn new birds if needed
+while (currentBirds < BIRD_COUNT) {
+    backgroundElements.push(new BackgroundElement(
+        'bird.png',
+        Math.random() * canvas.width + canvas.width, // Start from right edge or further
+        Math.random() * (canvas.height * 0.4),
+        100,
+        100,
+        1.5,
+        40,
+        2
+    ));
+}
+
+    // Spawn new balloons if needed
+    while (currentBalloons < BALLOON_COUNT) {
+        backgroundElements.push(new BackgroundElement(
+            'balloon.png',
+            Math.random() * canvas.width,
+            canvas.height + 100,
+            120,
+            160,
+            0,
+            0,
+            0,
+            true
+        ));
+    }
+
+    // Remove off-screen elements
+backgroundElements.forEach((element, index) => {
+    if (element.isBalloon && element.y < -element.height) {
+        backgroundElements.splice(index, 1);
+    } else if (!element.isBalloon && element.x + element.width < -canvas.width) { // Allow birds to fly further left
+        backgroundElements.splice(index, 1);
+    }
+});
+}
+
 // Function to reset the game when the player dies (including enemies and projectiles)
 function resetGame() {
     // Reset all enemies to their initial positions and clear projectiles
@@ -925,35 +1087,34 @@ function checkForDeathConditions() {
 
 var projectiles = [];
 
-// Call the death check function in your game loop
 function gameLoop(timestamp) {
     if (!gameStarted || !localPlayer) {
         requestAnimationFrame(gameLoop);
         return;
     }
 
-    requestAnimationFrame(gameLoop);
-
     // Calculate delta time
-    const deltaTime = timestamp - lastRenderTime;
-    
-    if (deltaTime < FRAME_TIME) {
+    if (!lastFrameTime) lastFrameTime = timestamp;
+    const deltaTime = (timestamp - lastFrameTime) / 1000;
+    lastFrameTime = timestamp;
+
+    if (deltaTime < FRAME_TIME / 1000) {
+        requestAnimationFrame(gameLoop);
         return;
     }
 
-    lastRenderTime = timestamp;
-    
     // Clear only the visible area
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Update game state with deltaTime
-    updateGameState(deltaTime / 1000);
+    updateGameState(deltaTime);
     
-    // Render game state
-    renderGame();
+    // Render game state with deltaTime
+    renderGame(deltaTime);
     
-    // Network update
     updateNetwork();
+    
+    requestAnimationFrame(gameLoop);
 }
 
 function updateGameState(deltaTime) {
@@ -982,35 +1143,42 @@ function updateGameState(deltaTime) {
     projectiles = projectiles.filter(projectile => projectile.update(deltaTime));
 }
 
-function renderGame() {
+function renderGame(deltaTime) {
+    // Update and draw background elements
+    backgroundElements.forEach(element => {
+        element.update(deltaTime);
+        element.draw();
+    });
+
+    manageBackgroundElements();
     spawnClouds();
     updateClouds();
 
     const groundLevel = calculateGroundLevel();
     
-    if (localPlayer.y + localPlayer.h < canvas.height) {
-        // Draw dirt
-        ctx.fillStyle = '#9b7a4b';
-        ctx.fillRect(0, groundLevel - cameraY + 20, canvas.width, canvas.height / 2 - 37.5 - 20);
-
-        // Draw grass gradient
-        const grassGradient = ctx.createLinearGradient(0, groundLevel - cameraY, 0, groundLevel - cameraY + 20);
-        grassGradient.addColorStop(0, '#6b8e23');
-        grassGradient.addColorStop(1, '#9acd32');
-        ctx.fillStyle = grassGradient;
-        ctx.fillRect(0, groundLevel - cameraY, canvas.width, 20);
+    // Draw ground image
+    if (groundImage.complete) {
+        const groundWidth = canvas.width * (GROUND_WIDTH_PERCENTAGE / 100);
+        const groundHeight = canvas.height * (GROUND_HEIGHT_PERCENTAGE / 100);
+        
+        // Calculate how many times to repeat the image
+        const repetitions = Math.ceil(canvas.width / groundWidth) + 3; // Added one more repetition
+        const startX = Math.floor(-cameraX % groundWidth) - groundWidth * 1.5; // Increased offset
+        
+        for (let i = 0; i < repetitions; i++) {
+            ctx.drawImage(
+                groundImage,
+                startX + (i * groundWidth),
+                groundLevel - cameraY,
+                groundWidth,
+                groundHeight
+            );
+        }
     }
 
-    if (localPlayer.y + localPlayer.h < canvas.height) {
-        ctx.fillStyle = '#9b7a4b';
-        ctx.fillRect(0, groundLevel - cameraY + 20, canvas.width, GRASS_HEIGHT - 20);
+    // Continue with rest of rendering...
+    
 
-        const grassGradient = ctx.createLinearGradient(0, groundLevel - cameraY, 0, groundLevel - cameraY + GRASS_HEIGHT);
-        grassGradient.addColorStop(0, '#6b8e23');
-        grassGradient.addColorStop(1, '#9acd32');
-        ctx.fillStyle = grassGradient;
-        ctx.fillRect(0, groundLevel - cameraY, canvas.width, GRASS_HEIGHT);
-    }
 
     // Draw game objects
     parkourObjects.forEach(obj => obj.draw());
@@ -1037,14 +1205,14 @@ function renderGame() {
         });
     }
 
-        // Draw and cleanup messages
-        messages.forEach((msg, index) => {
-            if (msg.isExpired()) {
-                messages.splice(index, 1);
-            } else {
-                msg.draw();
-            }
-        });
+    // Draw and cleanup messages
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].isExpired()) {
+            messages.splice(i, 1);
+        } else {
+            messages[i].draw(ctx);
+        }
+    }
 
     drawSpikes(cameraX, cameraY);
     checkForDeathConditions();
