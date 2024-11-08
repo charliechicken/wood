@@ -175,17 +175,21 @@ let localPlayer;
 const players = {};
 
 function connectToServer() {
-    ws = new WebSocket('ws://localhost:3000');
+    // Get the current host and use appropriate protocol (ws or wss)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname;
+    const port = window.location.port;
+    const wsUrl = `${protocol}//${host}${port ? ':' + port : ''}`; 
+
+    ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
         console.log('Connected to server');
         ws.send(JSON.stringify({
             type: 'join',
             playerId: myPlayerId,
-            x: spawnX,
-            y: spawnY,
-            name: playerName,
-            icon: playerIcon  // Make sure playerIcon includes the full path to the image
+            playerName: playerName,
+            icon: playerIcon
         }));
     };
 
