@@ -1,5 +1,8 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+// Set canvas background color
+ctx.fillStyle = '#E6E6FA'; // Light purple (Lavender)
+ctx.fillRect(0, 0, canvas.width, canvas.height);
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -1144,6 +1147,8 @@ function updateGameState(deltaTime) {
 }
 
 function renderGame(deltaTime) {
+    ctx.fillStyle = '#E6E6FA';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     // Update and draw background elements
     backgroundElements.forEach(element => {
         element.update(deltaTime);
