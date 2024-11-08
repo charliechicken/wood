@@ -71,13 +71,17 @@
     <audio id="backgroundMusic" src="bgmusic.mp3" loop></audio>
     <button id="startGameButton" disabled>Start Game</button>
   </div>
-
+  
   <canvas id="gameCanvas"></canvas>
   
   <!-- Container for the YouTube video -->
   <div id="youtubeContainer">
     <iframe id="youtubePlayer" width="400" height="300" frameborder="0" allowfullscreen></iframe>
   </div>
+  <div id="chatContainer" style="display: none; position: fixed; left: 10px; top: 10px; z-index: 1000; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; width: 300px;">
+    <div id="chatMessages" style="height: 150px; overflow-y: auto; color: white; margin-bottom: 10px; font-family: Arial;"></div>
+    <input type="text" id="chatInput" placeholder="Press Enter to chat..." style="width: 100%; padding: 5px; border-radius: 3px; border: none;">
+</div>
   <script src="main.js"></script>
 </body>
 </html>

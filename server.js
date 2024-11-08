@@ -3,113 +3,131 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 
-// Create an Express app
 const app = express();
-
-// Create an HTTP server for the Express app
 const server = http.createServer(app);
-
-// Create a WebSocket server that uses the same HTTP server
 const wss = new WebSocket.Server({ server });
 
-// Serve static files from the 'public' folder (you can place index.html here)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// WebSocket logic
-const players = {}; // Object to hold connected players
+const players = {};
 
 wss.on('connection', (socket) => {
-  let playerId = Date.now(); // Generate a unique ID for the player
-  players[playerId] = { socket, x: 50, y: 50, name: "Player " + playerId, icon: 'hawktuah.png' }; // Store player info and socket
+    socket.on('message', (message) => {
+        const data = JSON.parse(message);
+        
+        switch(data.type) {
+            case 'join':
+                // Store new player data
+                players[data.playerId] = {
+                    socket,
+                    x: data.x,
+                    y: data.y,
+                    name: data.name,
+                    icon: data.icon,
+                    speedX: 0,
+                    speedY: 0
+                };
 
-  console.log(`Player connected: ${playerId}, Total players: ${Object.keys(players).length}`);
+                // Send existing players to new player
+                socket.send(JSON.stringify({
+                    type: 'allPlayers',
+                    players: Object.fromEntries(
+                        Object.entries(players)
+                            .filter(([id]) => id !== data.playerId)
+                            .map(([id, player]) => [
+                                id, 
+                                {
+                                    id,
+                                    x: player.x,
+                                    y: player.y,
+                                    name: player.name,
+                                    icon: player.icon
+                                }
+                            ])
+                    )
+                }));
 
-  // Send all existing players to the new player
-  const allPlayersMessage = JSON.stringify({
-    type: 'allPlayers',
-    players: Object.fromEntries(
-      Object.entries(players).map(([id, player]) => [
-        id,
-        { id, x: player.x, y: player.y, name: player.name, icon: player.icon }
-      ])
-    )
-  });
-  socket.send(allPlayersMessage);
+                // Notify others about new player
+                broadcastToOthers(data.playerId, {
+                    type: 'playerJoined',
+                    id: data.playerId,
+                    x: data.x,
+                    y: data.y,
+                    name: data.name,
+                    icon: data.icon
+                });
+                break;
 
-  // Notify all players of the new player
-  for (const id in players) {
-    if (players[id].socket.readyState === WebSocket.OPEN && id !== playerId) {
-      players[id].socket.send(JSON.stringify({
-        type: 'playerConnected',
-        id: playerId,
-        name: players[playerId].name,
-        icon: players[playerId].icon,
-        x: players[playerId].x,
-        y: players[playerId].y
-      }));
-    }
-  }
+            case 'update':
+                if (players[data.playerId]) {
+                    // Update player position
+                    players[data.playerId].x = data.x;
+                    players[data.playerId].y = data.y;
+                    players[data.playerId].speedX = data.speedX;
+                    players[data.playerId].speedY = data.speedY;
 
-  socket.on('message', (message) => {
-    const data = JSON.parse(message);
-    console.log(`Received message from ${data.id}: ${data.type}`);
+                    // Broadcast position to others
+                    broadcastToOthers(data.playerId, {
+                        type: 'playerMoved',
+                        id: data.playerId,
+                        x: data.x,
+                        y: data.y,
+                        speedX: data.speedX,
+                        speedY: data.speedY
+                    });
+                }
+                break;
 
-    if (data.type === 'positionUpdate') {
-      // Update the player's position in the server
-      if (players[data.id]) {
-        players[data.id].x = data.x;
-        players[data.id].y = data.y;
-        console.log(`Updated position for ${data.id}: (${data.x}, ${data.y})`);
-      }
-
-      // Broadcast updated player position to all players
-      for (const id in players) {
-        if (players[id].socket.readyState === WebSocket.OPEN) {
-          players[id].socket.send(JSON.stringify({
-            type: 'positionUpdate',
-            id: data.id,
-            x: data.x,
-            y: data.y,
-            icon: data.icon
-          }));
+            case 'jump':
+                broadcastToOthers(data.playerId, {
+                    type: 'playerJumped',
+                    id: data.playerId
+                });
+                case 'chat':
+                    // Broadcast chat message to all players
+                    broadcastToAll({
+                        type: 'chatMessage',
+                        playerId: data.playerId,
+                        playerName: data.playerName,
+                        message: data.message
+                    });
+                break;
         }
-      }
-    } else if (data.type === 'disconnect') {
-      // Handle player disconnection
-      delete players[data.id]; // Remove player from the players object
-      console.log(`Player disconnected: ${data.id}`);
+    });
 
-      // Notify all remaining players about the disconnection
-      for (const id in players) {
-        if (players[id].socket.readyState === WebSocket.OPEN) {
-          players[id].socket.send(JSON.stringify({
-            type: 'playerDisconnected',
-            id: data.id
-          }));
+    socket.on('close', () => {
+        // Find and remove disconnected player
+        const disconnectedId = Object.keys(players).find(
+            id => players[id].socket === socket
+        );
+
+        if (disconnectedId) {
+            delete players[disconnectedId];
+            broadcastToAll({
+                type: 'playerLeft',
+                id: disconnectedId
+            });
         }
-      }
-    }
-  });
-
-  socket.on('close', () => {
-    // Handle cleanup when the socket closes unexpectedly
-    delete players[playerId];
-    console.log(`Player disconnected: ${playerId}, Total players: ${Object.keys(players).length}`);
-
-    // Notify all players about the disconnection
-    for (const id in players) {
-      if (players[id].socket.readyState === WebSocket.OPEN) {
-        players[id].socket.send(JSON.stringify({
-          type: 'playerDisconnected',
-          id: playerId
-        }));
-      }
-    }
-  });
+    });
 });
 
-// Start the server on a dynamic port (Heroku will provide this)
+function broadcastToOthers(senderId, message) {
+    Object.entries(players).forEach(([id, player]) => {
+        if (id !== senderId && player.socket.readyState === WebSocket.OPEN) {
+            player.socket.send(JSON.stringify(message));
+        }
+    });
+}
+
+function broadcastToAll(message) {
+    Object.values(players).forEach(player => {
+        if (player.socket.readyState === WebSocket.OPEN) {
+            player.socket.send(JSON.stringify(message));
+        }
+    });
+}
+
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+    console.log(`Server running on port ${port}`);
 });
