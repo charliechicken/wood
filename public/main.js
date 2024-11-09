@@ -188,8 +188,10 @@ function connectToServer() {
         ws.send(JSON.stringify({
             type: 'join',
             playerId: myPlayerId,
-            playerName: playerName,
-            icon: playerIcon
+            playerName: playerName,  // Add player name
+            icon: playerIcon,
+            x: spawnX,
+            y: spawnY
         }));
     };
 
@@ -1234,6 +1236,7 @@ function updateNetwork() {
             ws.send(JSON.stringify({
                 type: 'update',
                 playerId: myPlayerId,
+                playerName: playerName,  // Add player name
                 x: localPlayer.x,
                 y: localPlayer.y,
                 speedX: localPlayer.speedX,
