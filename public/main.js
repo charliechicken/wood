@@ -820,7 +820,7 @@ class Enemy {
             // Move towards player with deltaTime
             const speed = 2;
             this.x += (dx / distance) * speed * deltaTime * 60;
-            //this.y += (dy / distance) * speed * deltaTime * 60;
+            this.y += (dy / distance) * speed * deltaTime * 60;
 
             // Shooting logic
             const now = Date.now();

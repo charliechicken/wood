@@ -58,25 +58,26 @@ wss.on('connection', (socket) => {
                 });
                 break;
 
-            case 'update':
-                if (players[data.playerId]) {
-                    // Update player position
-                    players[data.playerId].x = data.x;
-                    players[data.playerId].y = data.y;
-                    players[data.playerId].speedX = data.speedX;
-                    players[data.playerId].speedY = data.speedY;
-
-                    // Broadcast position to others
-                    broadcastToOthers(data.playerId, {
-                        type: 'playerMoved',
-                        id: data.playerId,
-                        x: data.x,
-                        y: data.y,
-                        speedX: data.speedX,
-                        speedY: data.speedY
-                    });
-                }
-                break;
+                case 'update':
+                    if (players[data.playerId]) {
+                        // Store absolute positions
+                        players[data.playerId].x = data.x;
+                        players[data.playerId].y = data.absoluteY;  // Use absolute Y position
+                        players[data.playerId].speedX = data.speedX;
+                        players[data.playerId].speedY = data.speedY;
+                        players[data.playerId].groundLevel = data.groundLevel;  // Store ground level
+                
+                        broadcastToOthers(data.playerId, {
+                            type: 'playerMoved',
+                            id: data.playerId,
+                            x: data.x,
+                            y: data.absoluteY,
+                            groundLevel: data.groundLevel,
+                            speedX: data.speedX,
+                            speedY: data.speedY
+                        });
+                    }
+                    break;
 
             case 'jump':
                 broadcastToOthers(data.playerId, {
