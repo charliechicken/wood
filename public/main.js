@@ -198,16 +198,16 @@ function connectToServer() {
                 console.log('Players after update:', Object.keys(players));
                 break;
     
-            case 'playerMoved':
-                console.log('Player moved:', data.id, players[data.id]);
-                if (data.id !== myPlayerId && players[data.id]) {
-                    const player = players[data.id];
-                    player.x = data.x;
-                    player.y = data.y;
-                    player.speedX = data.speedX;
-                    player.speedY = data.speedY;
-                }
-                break;
+                case 'playerMoved':
+                    if (data.id !== myPlayerId && players[data.id]) {
+                        const player = players[data.id];
+                        // Convert percentage positions back to actual positions
+                        player.x = data.xPercent * canvas.width;
+                        player.y = data.yPercent * canvas.height;
+                        player.speedX = data.speedX;
+                        player.speedY = data.speedY;
+                    }
+                    break;
 
             case 'playerJoined':
                 if (data.id !== myPlayerId) {
@@ -294,7 +294,11 @@ class Player {
 
     draw() {
         if (this.loaded) {
-            console.log('Drawing player:', this.id, 'at', this.x - cameraX, this.y - cameraY);
+            const groundLevel = calculateGroundLevel();
+            const screenHeightPercentage = this.y / canvas.height;
+            
+            // Adjust Y position based on viewer's screen height
+            const adjustedY = screenHeightPercentage * canvas.height;
             
             ctx.save();
             ctx.globalAlpha = this.opacity;
@@ -1378,13 +1382,17 @@ function updateNetwork() {
     if (ws && ws.readyState === WebSocket.OPEN && localPlayer) {
         const now = Date.now();
         if (now - lastUpdateTime > UPDATE_INTERVAL) {
+            // Calculate positions as percentages of screen dimensions
+            const xPercentage = localPlayer.x / canvas.width;
+            const yPercentage = localPlayer.y / canvas.height;
+            
             ws.send(JSON.stringify({
                 type: 'update',
                 playerId: myPlayerId,
                 playerName: playerName,
                 icon: playerIcon,
-                x: localPlayer.x,
-                y: localPlayer.y,
+                xPercent: xPercentage,
+                yPercent: yPercentage,
                 speedX: localPlayer.speedX,
                 speedY: localPlayer.speedY
             }));

@@ -17,25 +17,28 @@ wss.on('connection', (socket) => {
         
         switch(data.type) {
             case 'join':
-                // Store new player data
                 players[data.playerId] = {
                     socket,
-                    x: data.x,
-                    y: data.y,
+                    xPercent: data.xPercent,
+                    yPercent: data.yPercent,
                     name: data.playerName,
                     icon: data.icon,
                     speedX: 0,
-                    speedY: 0
+                    speedY: 0,
+                    screenHeight: data.screenHeight,
+                    groundLevel: data.groundLevel
                 };
 
                 // Broadcast new player to others
                 broadcastToOthers(data.playerId, {
                     type: 'playerJoined',
                     id: data.playerId,
-                    x: data.x,
-                    y: data.y,
+                    xPercent: data.xPercent,
+                    yPercent: data.yPercent,
                     name: data.playerName,
-                    icon: data.icon
+                    icon: data.icon,
+                    screenHeight: data.screenHeight,
+                    groundLevel: data.groundLevel
                 });
 
                 // Send existing players to new player
@@ -46,57 +49,51 @@ wss.on('connection', (socket) => {
                             .filter(([id]) => id !== data.playerId)
                             .map(([id, player]) => [id, {
                                 id,
-                                x: player.x,
-                                y: player.y,
+                                xPercent: player.xPercent,
+                                yPercent: player.yPercent,
                                 name: player.name,
-                                icon: player.icon
+                                icon: player.icon,
+                                screenHeight: player.screenHeight,
+                                groundLevel: player.groundLevel
                             }])
                     )
                 }));
                 break;
 
-                case 'update':
-                    if (players[data.playerId]) {
-                        // Update player data
-                        players[data.playerId].x = data.x;
-                        players[data.playerId].y = data.y;
-                        players[data.playerId].speedX = data.speedX;
-                        players[data.playerId].speedY = data.speedY;
-                        players[data.playerId].icon = data.icon;
-                        players[data.playerId].name = data.playerName;
-                
-                        broadcastToOthers(data.playerId, {
-                            type: 'playerMoved',
-                            id: data.playerId,
-                            x: data.x,
-                            y: data.y,
-                            speedX: data.speedX,
-                            speedY: data.speedY,
-                            icon: data.icon,
-                            playerName: data.playerName
-                        });
-                    }
-                    break;
+            case 'update':
+                if (players[data.playerId]) {
+                    players[data.playerId].xPercent = data.xPercent;
+                    players[data.playerId].yPercent = data.yPercent;
+                    players[data.playerId].speedX = data.speedX;
+                    players[data.playerId].speedY = data.speedY;
+                    players[data.playerId].screenHeight = data.screenHeight;
+                    players[data.playerId].groundLevel = data.groundLevel;
 
-            case 'jump':
-                broadcastToOthers(data.playerId, {
-                    type: 'playerJumped',
-                    id: data.playerId
-                });
-                case 'chat':
-                    // Broadcast chat message to all players
-                    broadcastToAll({
-                        type: 'chatMessage',
-                        playerId: data.playerId,
-                        playerName: data.playerName,
-                        message: data.message
+                    broadcastToOthers(data.playerId, {
+                        type: 'playerMoved',
+                        id: data.playerId,
+                        xPercent: data.xPercent,
+                        yPercent: data.yPercent,
+                        speedX: data.speedX,
+                        speedY: data.speedY,
+                        screenHeight: data.screenHeight,
+                        groundLevel: data.groundLevel
                     });
+                }
+                break;
+
+            case 'chat':
+                broadcastToAll({
+                    type: 'chatMessage',
+                    playerId: data.playerId,
+                    playerName: data.playerName,
+                    message: data.message
+                });
                 break;
         }
     });
 
     socket.on('close', () => {
-        // Find and remove disconnected player
         const disconnectedId = Object.keys(players).find(
             id => players[id].socket === socket
         );
