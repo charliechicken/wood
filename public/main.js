@@ -198,16 +198,16 @@ function connectToServer() {
                 console.log('Players after update:', Object.keys(players));
                 break;
     
-                case 'playerMoved':
-                    if (data.id !== myPlayerId && players[data.id]) {
-                        const player = players[data.id];
-                        // Convert percentage positions back to actual positions
-                        player.x = data.xPercent * canvas.width;
-                        player.y = data.yPercent * canvas.height;
-                        player.speedX = data.speedX;
-                        player.speedY = data.speedY;
-                    }
-                    break;
+case 'playerMoved':
+    if (data.id !== myPlayerId && players[data.id]) {
+        const player = players[data.id];
+        // Convert percentage positions back to actual positions
+        player.x = data.xPercent * canvas.width;
+        player.y = data.yPercent * canvas.height;
+        player.speedX = data.speedX;
+        player.speedY = data.speedY;
+    }
+    break;
 
             case 'playerJoined':
                 if (data.id !== myPlayerId) {
@@ -273,7 +273,6 @@ class Player {
             this.arrowCooldown = 1000;
             this.arrowSprite = new Image();
             this.arrowSprite.src = 'arrow.png';
-            this.facingDirection = 1;
         } else {
             this.gravity = 0.6;
         }
@@ -385,43 +384,25 @@ class Player {
         }
     }
 
-    shootArrow() {
-        if (this.hasArrows && Date.now() - this.lastArrowTime >= this.arrowCooldown) {
-            const arrowSpeed = 15;
-            const arrow = {
-                x: this.facingDirection > 0 ? this.x + this.w : this.x,
-                y: this.y + this.h/2,
-                speedX: this.facingDirection * arrowSpeed,
-                speedY: 0,
-                w: 30,
-                h: 10
-            };
-            
-            this.arrows.push(arrow);
-            this.lastArrowTime = Date.now();
-        }
-    }
+shootArrow() {
+    if (!this.hasArrows) return;
+    
+    const now = Date.now();
+    if (now - this.lastArrowTime < this.arrowCooldown) return;
+    
+    this.lastArrowTime = now;
+    
+    this.arrows.push({
+        x: this.x + this.w,
+        y: this.y + this.h/2,
+        w: 30,
+        h: 10,
+        speed: 15
+    });
+}
 
     update(parkourObjects, deltaTime) {
         // Apply horizontal movement with adjusted speed
-        if (this.speedX > 0) {
-            this.facingDirection = 1;
-        } else if (this.speedX < 0) {
-            this.facingDirection = -1;
-        }
-    
-        // Update arrows if player has them
-        if (this.hasArrows) {
-            for (let i = this.arrows.length - 1; i >= 0; i--) {
-                const arrow = this.arrows[i];
-                arrow.x += arrow.speedX;
-                
-                // Remove arrows that are off screen
-                if (arrow.x > canvas.width || arrow.x < 0) {
-                    this.arrows.splice(i, 1);
-                }
-            }
-        }
         this.x += this.speedX * deltaTime * 60;
         
         // Check horizontal collisions
