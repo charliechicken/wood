@@ -22,11 +22,21 @@ wss.on('connection', (socket) => {
                     socket,
                     x: data.x,
                     y: data.y,
-                    name: data.name,
+                    name: data.playerName,
                     icon: data.icon,
                     speedX: 0,
                     speedY: 0
                 };
+
+                // Broadcast new player to others
+                broadcastToOthers(data.playerId, {
+                    type: 'playerJoined',
+                    id: data.playerId,
+                    x: data.x,
+                    y: data.y,
+                    name: data.playerName,
+                    icon: data.icon
+                });
 
                 // Send existing players to new player
                 socket.send(JSON.stringify({
@@ -34,49 +44,39 @@ wss.on('connection', (socket) => {
                     players: Object.fromEntries(
                         Object.entries(players)
                             .filter(([id]) => id !== data.playerId)
-                            .map(([id, player]) => [
-                                id, 
-                                {
-                                    id,
-                                    x: player.x,
-                                    y: player.y,
-                                    name: player.name,
-                                    icon: player.icon
-                                }
-                            ])
+                            .map(([id, player]) => [id, {
+                                id,
+                                x: player.x,
+                                y: player.y,
+                                name: player.name,
+                                icon: player.icon
+                            }])
                     )
                 }));
-
-                // Notify others about new player
-                broadcastToOthers(data.playerId, {
-                    type: 'playerJoined',
-                    id: data.playerId,
-                    x: data.x,
-                    y: data.y,
-                    name: data.name,
-                    icon: data.icon
-                });
                 break;
 
-            case 'update':
-                if (players[data.playerId]) {
-                    // Update player position
-                    players[data.playerId].x = data.x;
-                    players[data.playerId].y = data.y;
-                    players[data.playerId].speedX = data.speedX;
-                    players[data.playerId].speedY = data.speedY;
-
-                    // Broadcast position to others
-                    broadcastToOthers(data.playerId, {
-                        type: 'playerMoved',
-                        id: data.playerId,
-                        x: data.x,
-                        y: data.y,
-                        speedX: data.speedX,
-                        speedY: data.speedY
-                    });
-                }
-                break;
+                case 'update':
+                    if (players[data.playerId]) {
+                        // Update player data
+                        players[data.playerId].x = data.x;
+                        players[data.playerId].y = data.y;
+                        players[data.playerId].speedX = data.speedX;
+                        players[data.playerId].speedY = data.speedY;
+                        players[data.playerId].icon = data.icon;
+                        players[data.playerId].name = data.playerName;
+                
+                        broadcastToOthers(data.playerId, {
+                            type: 'playerMoved',
+                            id: data.playerId,
+                            x: data.x,
+                            y: data.y,
+                            speedX: data.speedX,
+                            speedY: data.speedY,
+                            icon: data.icon,
+                            playerName: data.playerName
+                        });
+                    }
+                    break;
 
             case 'jump':
                 broadcastToOthers(data.playerId, {

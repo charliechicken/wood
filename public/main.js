@@ -69,7 +69,6 @@ document.getElementById('chatInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         const input = e.target;
         const message = input.value.trim();
-                players[myPlayerId] = localPlayer;
         if (message && ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 type: 'chat',
@@ -112,42 +111,15 @@ document.getElementById('chatInput').addEventListener('keypress', (e) => {
                 const selectedIcon = document.querySelector('#iconSelection img.selected');
                 playerIcon = selectedIcon ? selectedIcon.getAttribute('data-icon') : 'hawktuah.png';
                 
-                // Only create the local player, don't add to players object yet
-                localPlayer = new Player(myPlayerId, spawnX, spawnY, 75, 75, playerIcon, playerName);
+                // Create local player with full opacity
+                localPlayer = new Player(myPlayerId, spawnX, spawnY, 75, 75, playerIcon, playerName, 1);
+                
+                // Initialize controller for local player
                 controllers[myPlayerId] = new Controller(myPlayerId);
                 
-                // Initialize chat after game starts
-                // Add global chat toggle
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        const chatContainer = document.getElementById('chatContainer');
-        const chatInput = document.getElementById('chatInput');
-        
-        if (chatContainer.style.display === 'none') {
-            // Show chat and focus input
-            chatContainer.style.display = 'block';
-            chatInput.focus();
-        } else if (document.activeElement === chatInput) {
-            // Send message and hide chat
-            const message = chatInput.value.trim();
-            if (message && ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'chat',
-                    playerId: myPlayerId,
-                    playerName: playerName,
-                    message: message
-                }));
-                chatInput.value = '';
-            }
-            chatContainer.style.display = 'none';
-        }
-    } else if (e.key === 'Escape' && document.getElementById('chatContainer').style.display === 'block') {
-        // Hide chat on escape
-        document.getElementById('chatContainer').style.display = 'none';
-    }
-});
-                
+                // Connect to server after player is created
                 connectToServer();
+                
                 gameStarted = true;
                 requestAnimationFrame(gameLoop);
             })
@@ -175,7 +147,6 @@ let localPlayer;
 const players = {};
 
 function connectToServer() {
-    // Get the current host and use appropriate protocol (ws or wss)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = window.location.port;
@@ -185,39 +156,59 @@ function connectToServer() {
 
     ws.onopen = () => {
         console.log('Connected to server');
+        // Send initial player data
         ws.send(JSON.stringify({
             type: 'join',
             playerId: myPlayerId,
             playerName: playerName,
-            icon: playerIcon
+            icon: playerIcon,
+            x: localPlayer.x,
+            y: localPlayer.y
         }));
     };
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log('Received websocket message:', data.type, data);
         
         switch(data.type) {
             case 'allPlayers':
-                // Clear all existing players
-                Object.keys(players).forEach(id => delete players[id]);
+                console.log('Current players before update:', Object.keys(players));
+                // Clear existing players
+                Object.keys(players).forEach(id => {
+                    if (id !== myPlayerId) delete players[id];
+                });
                 
-                // Add only other players
+                // Add other players
                 Object.entries(data.players).forEach(([id, playerData]) => {
                     if (id !== myPlayerId) {
+                        console.log('Creating new player:', id, playerData);
                         players[id] = new Player(
                             id,
                             playerData.x,
                             playerData.y,
                             75,
                             75,
-                            playerData.icon,
+                            playerData.icon || 'hawktuah.png',
                             playerData.name,
-                            0.5
+                            0.5  // Set opacity to 0.5 for other players
                         );
                     }
                 });
+                console.log('Players after update:', Object.keys(players));
                 break;
     
+            case 'playerMoved':
+                console.log('Player moved:', data.id, players[data.id]);
+                if (data.id !== myPlayerId && players[data.id]) {
+                    const player = players[data.id];
+                    player.x = data.x;
+                    player.y = data.y;
+                    player.speedX = data.speedX;
+                    player.speedY = data.speedY;
+                }
+                break;
+
             case 'playerJoined':
                 if (data.id !== myPlayerId) {
                     players[data.id] = new Player(
@@ -227,31 +218,19 @@ function connectToServer() {
                         75,
                         75,
                         data.icon,
-                        data.name,
-                        0.5
+                        data.name
                     );
                 }
                 break;
-    
-            case 'playerMoved':
-                if (data.id !== myPlayerId) {
-                    const player = players[data.id];
-                    if (player) {
-                        player.x = data.x;
-                        player.y = data.y;
-                        player.speedX = data.speedX;
-                        player.speedY = data.speedY;
-                    }
-                }
-                break;
-    
+
             case 'playerLeft':
-                if (players[data.id]) {
+                if (data.id !== myPlayerId) {
                     delete players[data.id];
                 }
-                case 'chatMessage':
-                    messages.push(new Message(`${data.playerName}: ${data.message}`, data.playerId));
-                    break;
+                break;
+            case 'chatMessage':
+                messages.push(new Message(`${data.playerName}: ${data.message}`, data.playerId));
+                break;
         }
     };
 
@@ -279,10 +258,23 @@ class Player {
         this.h = h;
         this.speedX = 0;
         this.speedY = 0;
-        if(spritePath != "ray.png") {
-            this.gravity = 0.6;
-        } else {
+        if (spritePath === "ray.png") {
             this.gravity = 1.5;
+        } else if (spritePath === "stephen.jpeg") {
+            this.gravity = 10;
+        } else if (spritePath === "ryan2.png") {
+            this.gravity = 0.3;
+        } else if (spritePath === "spencer1.png") {
+            this.gravity = 0.6;
+            // Add arrow properties
+            this.hasArrows = true;
+            this.arrows = [];
+            this.lastArrowTime = 0;
+            this.arrowCooldown = 1000;
+            this.arrowSprite = new Image();
+            this.arrowSprite.src = 'arrow.png';
+        } else {
+            this.gravity = 0.6;
         }
         this.jumpSpeed = -15;
         this.sprite = new Image();
@@ -300,36 +292,109 @@ class Player {
         };
     }
 
-   draw() {
-    if (this.loaded) {
-        ctx.globalAlpha = this.opacity;
-        ctx.drawImage(this.sprite, this.x - cameraX, this.y - cameraY, this.w, this.h);
-        
-        // Draw player name
-        ctx.font = '14px Arial';
-        ctx.fillStyle = 'black';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.name, this.x + this.w/2 - cameraX, this.y - 10 - cameraY);
-        
-        // Reset opacity
-        ctx.globalAlpha = 1;
+    draw() {
+        if (this.loaded) {
+            console.log('Drawing player:', this.id, 'at', this.x - cameraX, this.y - cameraY);
+            
+            ctx.save();
+            ctx.globalAlpha = this.opacity;
+            
+            // Draw player sprite
+            ctx.drawImage(
+                this.sprite, 
+                this.x - cameraX, 
+                this.y - cameraY, 
+                this.w, 
+                this.h
+            );
+            
+            // Draw player name
+            ctx.font = '14px Arial';
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.fillText(
+                this.name, 
+                this.x + this.w/2 - cameraX, 
+                this.y - 10 - cameraY
+            );
+            
+            ctx.restore();
+            
+            // Draw reload bar if player has arrows
+            if (this.hasArrows) {
+                const now = Date.now();
+                const timeSinceLastShot = now - this.lastArrowTime;
+                const reloadProgress = Math.min(timeSinceLastShot / this.arrowCooldown, 1);
+                
+                // Draw background bar outline
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(
+                    this.x - cameraX,
+                    this.y - 30 - cameraY,
+                    this.w,
+                    5
+                );
+                
+                // Draw background bar
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(
+                    this.x - cameraX,
+                    this.y - 30 - cameraY,
+                    this.w,
+                    5
+                );
+                
+                // Draw progress bar
+                ctx.fillStyle = reloadProgress >= 1 ? '#00ff00' : '#ff0000';
+                ctx.fillRect(
+                    this.x - cameraX,
+                    this.y - 30 - cameraY,
+                    this.w * reloadProgress,
+                    5
+                );
+                
+                // Draw progress bar outline
+                ctx.strokeRect(
+                    this.x - cameraX,
+                    this.y - 30 - cameraY,
+                    this.w * reloadProgress,
+                    5
+                );
+            }
+            
+            // Reset opacity
+            ctx.globalAlpha = 1;
+    
+            if (this.hasArrows && this.arrowSprite.complete) {
+                this.arrows.forEach(arrow => {
+                    ctx.drawImage(
+                        this.arrowSprite,
+                        arrow.x - cameraX,
+                        arrow.y - cameraY,
+                        arrow.w + 15,
+                        arrow.h + 15
+                    );
+                });
+            }
+        }
     }
-}
 
-draw() {
-    if (this.loaded) {
-        ctx.globalAlpha = this.opacity;
-        ctx.drawImage(this.sprite, this.x - cameraX, this.y - cameraY, this.w, this.h);
-        
-        // Draw player name
-        ctx.font = '14px Arial';
-        ctx.fillStyle = 'black';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.name, this.x + this.w/2 - cameraX, this.y - 10 - cameraY);
-        
-        // Reset opacity
-        ctx.globalAlpha = 1;
-    }
+shootArrow() {
+    if (!this.hasArrows) return;
+    
+    const now = Date.now();
+    if (now - this.lastArrowTime < this.arrowCooldown) return;
+    
+    this.lastArrowTime = now;
+    
+    this.arrows.push({
+        x: this.x + this.w,
+        y: this.y + this.h/2,
+        w: 30,
+        h: 10,
+        speed: 15
+    });
 }
 
     update(parkourObjects, deltaTime) {
@@ -346,6 +411,7 @@ draw() {
                 }
             }
         }
+        
         
         // Apply vertical movement
         this.y += this.speedY * deltaTime * 60;
@@ -374,6 +440,32 @@ draw() {
             this.jumpCount = 0;
             this.onObject = false;
         }
+
+        if (this.hasArrows) {
+            for (let i = this.arrows.length - 1; i >= 0; i--) {
+                const arrow = this.arrows[i];
+                arrow.x += arrow.speed;
+
+                // Remove arrows that go off screen
+                if (arrow.x > canvas.width + cameraX) {
+                    this.arrows.splice(i, 1);
+                    continue;
+                }
+
+                // Check for collision with enemies
+                if (enemies) {
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        const enemy = enemies[j];
+                        if (this.arrowCollidesWith(arrow, enemy)) {
+                            // Remove both arrow and enemy
+                            this.arrows.splice(i, 1);
+                            enemies.splice(j, 1);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     collidesWith(obj) {
@@ -381,6 +473,32 @@ draw() {
             this.x + this.w > obj.x &&
             this.y < obj.y + obj.h &&
             this.y + this.h > obj.y;
+    }
+
+    arrowCollidesWith(arrow, enemy) {
+        return (
+            arrow.x < enemy.x + enemy.w &&
+            arrow.x + arrow.w > enemy.x &&
+            arrow.y < enemy.y + enemy.h &&
+            arrow.y + arrow.h > enemy.y
+        );
+    }
+
+    shootArrow() {
+        if (!this.hasArrows) return;
+        
+        const now = Date.now();
+        if (now - this.lastArrowTime < this.arrowCooldown) return;
+        
+        this.lastArrowTime = now;
+        
+        this.arrows.push({
+            x: this.x + this.w,
+            y: this.y + this.h/2,
+            w: 60,
+            h: 20,
+            speed: 15
+        });
     }
 
     jump() {
@@ -518,6 +636,20 @@ class Controller {
         this.up = false;
         this.right = false;
         this.left = false;
+        this.shoot = false;
+
+        document.addEventListener('keydown', (e) => {
+            if (this.playerId === myPlayerId) {
+                switch(e.code) {
+                    // Existing key handlers...
+                    case 'KeyF':
+                        if (localPlayer && localPlayer.hasArrows) {
+                            localPlayer.shootArrow();
+                        }
+                        break;
+                }
+            }
+        });
 
         let keyEvent = (e) => {
             if (this.playerId === myPlayerId) {
@@ -783,19 +915,6 @@ icons.forEach(icon => {
     });
 });
 
-document.getElementById('startGameButton').addEventListener('click', () => {
-    playerName = document.getElementById('playerNameInput').value;
-    if (!playerName || !playerIcon) return;
-
-    document.getElementById('startScreen').style.display = 'none';
-
-    myPlayerId = Math.random().toString(36).substring(2, 15);
-    players[myPlayerId] = new Player(myPlayerId, 50, canvas.height - GRASS_HEIGHT - 150, 75, 75, playerIcon, playerName);
-    controllers[myPlayerId] = new Controller(myPlayerId);
-    gameStarted = true;
-
-    requestAnimationFrame(gameLoop);
-});
 
 class Enemy {
     constructor(x, y) {
@@ -820,7 +939,7 @@ class Enemy {
             // Move towards player with deltaTime
             const speed = 2;
             this.x += (dx / distance) * speed * deltaTime * 60;
-            this.y += (dy / distance) * speed * deltaTime * 60;
+            //this.y += (dy / distance) * speed * deltaTime * 60;
 
             // Shooting logic
             const now = Date.now();
@@ -1059,11 +1178,35 @@ function resetGame() {
 }
 
 // Example of handling player death
-function handlePlayerDeath() {
-    console.log("Player died! Resetting the game...");
-    resetPlayerPosition(localPlayer);
-    projectiles.length = 0; // Clear all projectiles
-}
+    function handlePlayerDeath() {
+        console.log("Player died! Resetting the game...");
+        resetPlayerPosition(localPlayer);
+        projectiles.length = 0; // Clear all projectiles
+        
+        // Reset all enemies
+        enemies.forEach(enemy => {
+            enemy.reset();
+        });
+    
+        // If player is Spencer, respawn all enemies
+        if (localPlayer && localPlayer.hasArrows) {
+            // Clear existing enemies
+            enemies.length = 0;
+            
+            // Recreate enemies at their initial positions
+            const groundLevel = calculateGroundLevel();
+            const enemyPositions = [
+                    new Enemy(1000, canvas.height - GRASS_HEIGHT - 200),
+                    new Enemy(3000, canvas.height - GRASS_HEIGHT - 800),
+                    new Enemy(4000, canvas.height - GRASS_HEIGHT - 1700),
+                    new Enemy(5500, canvas.height - GRASS_HEIGHT - 2450)
+            ];
+            
+            enemyPositions.forEach(pos => {
+                enemies.push(new Enemy(pos.x, pos.y));
+            });
+        }
+    }
 
 // Function to reset the player's position
 function resetPlayerPosition(player) {
@@ -1153,6 +1296,19 @@ function updateGameState(deltaTime) {
 function renderGame(deltaTime) {
     ctx.fillStyle = '#E6E6FA';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    Object.values(players).forEach(player => {
+        if (player && player.id !== myPlayerId) {
+            console.log('Drawing other player:', player.id, player.x, player.y);
+            player.draw();
+        }
+    });
+
+    // Draw local player last
+    if (localPlayer) {
+        console.log('Drawing local player:', localPlayer.id, localPlayer.x, localPlayer.y);
+        localPlayer.draw();
+    }
     // Update and draw background elements
     backgroundElements.forEach(element => {
         element.update(deltaTime);
@@ -1194,15 +1350,6 @@ function renderGame(deltaTime) {
     enemies.forEach(enemy => enemy.draw());
     projectiles.forEach(projectile => projectile.draw());
 
-    // Draw all players (including local player) only once
-    if (localPlayer) {
-        localPlayer.draw();
-    }
-    Object.values(players).forEach(player => {
-        if (player && player.id !== myPlayerId) {
-            player.draw();
-        }
-    });
 
     // Draw effects
     if (localPlayer.health > 0) {
@@ -1228,12 +1375,14 @@ function renderGame(deltaTime) {
 }
 
 function updateNetwork() {
-    if (ws && ws.readyState === WebSocket.OPEN) {
+    if (ws && ws.readyState === WebSocket.OPEN && localPlayer) {
         const now = Date.now();
         if (now - lastUpdateTime > UPDATE_INTERVAL) {
             ws.send(JSON.stringify({
                 type: 'update',
                 playerId: myPlayerId,
+                playerName: playerName,
+                icon: playerIcon,
                 x: localPlayer.x,
                 y: localPlayer.y,
                 speedX: localPlayer.speedX,
