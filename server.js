@@ -26,20 +26,28 @@ wss.on('connection', (socket) => {
                     speedX: 0,
                     speedY: 0,
                     screenHeight: data.screenHeight,
-                    groundLevel: data.groundLevel
+                    groundLevel: data.groundLevel,
+                    level: data.level  // Add this line
                 };
 
                 // Broadcast new player to others
-                broadcastToOthers(data.playerId, {
-                    type: 'playerJoined',
-                    id: data.playerId,
-                    xPercent: data.xPercent,
-                    yPercent: data.yPercent,
-                    name: data.playerName,
-                    icon: data.icon,
-                    screenHeight: data.screenHeight,
-                    groundLevel: data.groundLevel
-                });
+                socket.send(JSON.stringify({
+                    type: 'allPlayers',
+                    players: Object.fromEntries(
+                        Object.entries(players)
+                            .filter(([id]) => id !== data.playerId)
+                            .map(([id, player]) => [id, {
+                                id,
+                                xPercent: player.xPercent,
+                                yPercent: player.yPercent,
+                                name: player.name,
+                                icon: player.icon,
+                                screenHeight: player.screenHeight,
+                                groundLevel: player.groundLevel,
+                                level: player.level  // Add level information
+                            }])
+                    )
+                }));
 
                 // Send existing players to new player
                 socket.send(JSON.stringify({
@@ -68,6 +76,7 @@ wss.on('connection', (socket) => {
                     players[data.playerId].speedY = data.speedY;
                     players[data.playerId].screenHeight = data.screenHeight;
                     players[data.playerId].groundLevel = data.groundLevel;
+                    players[data.playerId].level = data.level;  // Add level information
 
                     broadcastToOthers(data.playerId, {
                         type: 'playerMoved',
@@ -77,7 +86,8 @@ wss.on('connection', (socket) => {
                         speedX: data.speedX,
                         speedY: data.speedY,
                         screenHeight: data.screenHeight,
-                        groundLevel: data.groundLevel
+                        groundLevel: data.groundLevel,
+                        level: data.level  // Add level information
                     });
                 }
                 break;
