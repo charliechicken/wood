@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History Quiz Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script type="module">
+        import { HfInference } from 'https://cdn.jsdelivr.net/npm/@huggingface/inference@2.6.1/+esm';
+        window.hf = new HfInference("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", {
+            retry_on_error: true,
+            wait_on_rate_limit: true
+        });
+    </script>
+    <style>
+        /* Keep only custom styles that don't conflict with Bootstrap */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --background-color: #f5f6fa;
+            --text-color: #2c3e50;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .result.correct { background-color: #2ecc71; }
+        .result.incorrect { background-color: var(--accent-color); }
+        
+        /* Keep your existing hover effects and animations */
+        .answer-section, .answer-text, .answer-links {
+            /* Keep existing styles for these elements */
+        }
+
+        .join-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        .join-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 3rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            transform: translateY(0);
+            transition: transform 0.3s;
+        }
+
+        .game-logo {
+            margin-bottom: 2rem;
+        }
+
+        .game-logo i {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .game-logo h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+
+        #username {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            border: 2px solid #eee;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+
+        .mode-selection {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .join-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .join-button i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .join-button span {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .join-button small {
+            opacity: 0.8;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Game screen styles */
+        .buzz-button {
+            position: relative;
+            overflow: hidden;
+            padding: 1.5rem !important;
+            font-size: 1.8rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s !important;
+        }
+
+        .buzz-button:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.1);
+            transform: translateX(-100%);
+            transition: transform 0.3s;
+        }
+
+        .buzz-button:hover:before {
+            transform: translateX(0);
+        }
+
+        /* Make answer input larger */
+        #answer-form .form-control-lg {
+            font-size: 1.25rem;
+            padding: 1rem;
+        }
+
+        #answer {
+            height: auto !important;
+            min-height: 60px;
+        }
+
+        #answer:focus {
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+            border-color: var(--secondary-color);
+        }
+
+        .input-group-lg > .form-control {
+            font-size: 1.2rem !important;
+            padding: 1rem 0.75rem !important;
+        }
+
+        .input-group-lg > .btn {
+            font-size: 1.2rem !important;
+            padding: 0.5rem 1.5rem !important;
+        }
+
+        #answer-form {
+            width: 100%;
+            margin: 15px 0;
+            background-color: white;
+        }
+
+        #answer-form .form-control-lg {
+            background-color: white !important;
+            color: black !important;
+            font-size: 1.5rem !important;
+            padding: 1rem !important;
+            height: auto !important;
+            min-height: 60px;
+            border: 2px solid #dee2e6;
+        }
+
+        #answer-form .form-control-lg:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        }
+
+        .input-group-lg {
+            width: 100% !important;
+        }
+
+        .input-group-lg > .form-control {
+            flex: 1 1 auto;
+            min-width: 80%;
+        }
+
+        .input-group-lg > .btn {
+            flex: 0 0 auto;
+            min-width: 120px;
+        }
+
+        .game-card {
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 1rem;
+            background: linear-gradient(145deg, #ffffff, #f5f6fa);
+        }
+
+        .question-display {
+            background: rgba(44, 62, 80, 0.05);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            font-weight: 500;
+            line-height: 1.6;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .result-display {
+            padding: 1rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .result-display.correct {
+            background: linear-gradient(145deg, #2ecc71, #27ae60);
+            color: white;
+        }
+
+        .result-display.incorrect {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn-gradient-success {
+            background: linear-gradient(145deg, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .btn-gradient-danger {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+        }
+
+        .btn-gradient-primary {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+        }
+
+        .modern-input {
+            border: 2px solid #eee;
+            border-radius: 0.75rem;
+            padding: 1.25rem !important;
+            font-size: 1.2rem !important;
+            box-shadow: none !important;
+            transition: all 0.3s ease;
+        }
+
+        .modern-input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25) !important;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes buzz {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        .buzz-animation:hover {
+            animation: buzz 0.3s ease;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .active-player-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #28a745;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 5px;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .streak-bonus {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .achievement {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 2px;
+            font-size: 0.8em;
+            background: #007bff;
+            color: white;
+        }
+        .timer {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #dc3545;
+    text-align: center;
+    margin: 1rem 0;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: rgba(220, 53, 69, 0.1);
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.ai-hints {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+    border-left: 4px solid #6610f2;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.ai-hints ul {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.ai-hints li {
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
+
+.ai-hints li strong {
+    color: #212529;
+    margin-right: 0.5rem;
+}
+
+.back-button {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1000;
+    transition: all 0.2s;
+}
+
+.back-button:hover {
+    background-color: #e9ecef;
+}
+
+.back-button i {
+    font-size: 1.1rem;
+}
+        
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="join-screen" class="join-screen">
+            <div class="join-container">
+                <div class="game-logo">
+                    <i class="fas fa-history fa-3x mb-3"></i>
+                    <h1>LHS History Bowl Practice</h1>
+                    <p class="tagline">Test your knowledge against time!</p>
+                </div>
+                <div class="join-form">
+                    <div class="input-wrapper">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" placeholder="Enter your username">
+                    </div>
+                    <div class="mode-selection">
+                        <button class="join-button primary" onclick="joinRoom('public')">
+                            <i class="fas fa-users"></i>
+                            <span>Multiplayer Mode</span>
+                            <small>Compete with others</small>
+                        </button>
+                        <button class="join-button secondary" onclick="joinRoom('private')">
+                            <i class="fas fa-user-graduate"></i>
+                            <span>Practice Mode</span>
+                            <small>Train yourself</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="game-screen" style="display: none;">
+            <button class="back-button" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i>
+                Back
+            </button>
+            <br>
+            <br>
+            <br>
+            <div class="container-fluid">
+                <div class="row">
+                    <!-- Left Column -->
+                    <div class="col-md-6">
+                        <div class="card mb-3 game-card">
+                            <div class="card-body p-4">
+                                <div id="question" class="question-display mb-4 h4"></div>
+                                <div id="timer" class="timer text-center mb-3" style="display: none;"></div>                                <div id="result" class="result-display mb-4" role="alert"></div>
+                                <div class="game-controls d-grid gap-3">
+                                    <button id="start-button" class="btn btn-gradient-success btn-lg pulse-animation" onclick="startGame()">
+                                        <i class="fas fa-play me-2"></i>Start Game
+                                    </button>
+                                    <button id="buzz-button" class="btn btn-gradient-danger btn-lg buzz-animation" onclick="buzz()" style="display: none;">
+                                        <i class="fas fa-bolt me-2"></i>Buzz
+                                    </button>
+                                    <div id="answer-form" class="input-group input-group-lg mb-3 fade-in" style="display: none;">
+                                        <input type="text" id="answer" 
+                                               class="form-control form-control-lg modern-input" 
+                                               placeholder="Your answer...">
+                                        <button class="btn btn-gradient-primary btn-lg" onclick="submitAnswer()">
+                                            <i class="fas fa-check me-2"></i>Submit
+                                        </button>
+                                    </div>
+                                    <button id="next-question" class="btn btn-gradient-primary btn-lg slide-in" onclick="nextQuestion()" style="display: none;">
+                                        <i class="fas fa-forward me-2"></i>Next Question
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Past Questions</h5>
+                                <div id="past-questions-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Leaderboard</h5>
+                                <div id="scoreboard" class="list-group"></div>
+                                <div class="stats-container">
+                                    <div class="stat-card">
+                                        <h5>Current Streak</h5>
+                                        <div id="streak-counter">0</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h5>Accuracy</h5>
+                                        <div id="accuracy">0%</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h5>Fastest Buzz</h5>
+                                        <div id="fastest-buzz">-</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h5>Achievements</h5>
+                                        <div id="achievements"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Game Controls</h5>
+                                <div class="mb-3">
+                                    <label for="speed-slider" class="form-label">Question Speed</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="range" class="form-range" id="speed-slider" min="50" max="500" step="50" value="200">
+                                        <span id="speed-value" class="badge bg-secondary">200ms</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let gameStarted = false;
+        let currentQuestion = [];
+        let canBuzz = true;
+        let roomType = null;
+
+        // Check for existing session on load
+        window.addEventListener('load', () => {
+            const savedSession = localStorage.getItem('quizSession');
+            if (savedSession) {
+                const session = JSON.parse(savedSession);
+                document.getElementById('username').value = session.username;
+                if (session.roomType) {
+                    joinRoom(session.roomType, true);
+                }
+            }
+        });
+
+
+        function joinRoom(type, isReconnect = false) {
+            const username = document.getElementById('username').value;
+            if (!username) {
+                alert('Please enter a username');
+                return;
+            }
+            
+            // Check if user is already in the room
+            if (isReconnect && roomType === type) {
+                // Just show game screen without creating new session
+                document.getElementById('join-screen').style.display = 'none';
+                document.getElementById('game-screen').style.display = 'block';
+                return;
+            }
+            
+            // Save session info
+            localStorage.setItem('quizSession', JSON.stringify({
+                username,
+                roomType: type
+            }));
+            
+            roomType = type;
+            socket.emit('joinRoom', type, username, isReconnect);
+            document.getElementById('join-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+        }
+
+        function startGame() {
+            if (!gameStarted) {
+                socket.emit('startGame', roomType);
+                gameStarted = true;
+                document.getElementById('start-button').style.display = 'none';
+                document.getElementById('buzz-button').style.display = 'block';
+            }
+        }
+
+        function buzz() {
+            if (!canBuzz) return;
+            socket.emit('buzz', roomType);
+            document.getElementById('buzz-button').style.display = 'none';
+            document.getElementById('answer-form').style.display = 'block';
+            document.getElementById('answer').focus();
+            canBuzz = false;
+        }
+
+        function submitAnswer() {
+            const answer = document.getElementById('answer').value;
+            socket.emit('submitAnswer', roomType, answer);
+            document.getElementById('answer-form').style.display = 'none';
+            document.getElementById('answer').value = '';
+        }
+
+        function updateScoreboard(scores, players) {
+            const scoreboard = document.getElementById('scoreboard');
+            const currentUsername = document.getElementById('username').value;
+            const sortedPlayers = players.sort((a, b) => scores[b] - scores[a]);
+            
+            scoreboard.innerHTML = sortedPlayers.map((player, index) => `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        ${index + 1}. ${player}
+                        ${player === currentUsername ? '<span class="active-player-dot"></span>' : ''}
+                    </span>
+                    <span class="badge bg-primary rounded-pill">${scores[player] || 0}</span>
+                </div>
+            `).join('');
+        }
+
+        socket.on('playerJoined', ({ players, scores }) => {
+            updateScoreboard(scores, players);
+            
+            const startButton = document.getElementById('start-button');
+            if (players.length === 1 && !gameStarted) {
+                startButton.style.display = 'block';
+            } else {
+                startButton.style.display = 'none';
+            }
+        });
+
+        socket.on('revealWord', ({ word, fullText }) => {
+    document.getElementById('timer').style.display = 'none';
+    document.getElementById('buzz-button').style.display = 'block';
+    if (fullText) {
+        document.getElementById('question').textContent = fullText;
+    } else {
+        currentQuestion.push(word);
+        document.getElementById('question').textContent = currentQuestion.join(' ');
+    }
+});
+
+        socket.on('playerBuzzed', (data) => {
+    if (data.player === document.getElementById('username').value) {
+        document.getElementById('answer-form').style.display = 'block';
+        document.getElementById('answer').focus();
+    }
+    document.getElementById('buzz-button').style.display = 'none';
+});
+
+        socket.on('answerResult', async (data) => {
+    try {
+        const result = document.getElementById('result');
+        result.textContent = data.correct ? 
+            `${data.player} got it right!` : 
+            `Incorrect. The answer was: ${data.correctAnswer}`;
+        result.className = `result ${data.correct ? 'correct' : 'incorrect'}`;
+        
+        // Update scoreboard
+        if (data.scores) {
+            updateScoreboard(data.scores, Object.keys(data.scores));
+        }
+
+        // Save to past questions
+        const pastQuestionsList = document.getElementById('past-questions-list');
+        if (pastQuestionsList && data.question) {  // Check for data.question
+            const aiHints = await generateHints(data.question, data.correctAnswer);
+            
+            const pastQuestionEntry = document.createElement('div');
+            pastQuestionEntry.className = 'past-question-entry';
+            pastQuestionEntry.innerHTML = `
+                <p><strong>Question:</strong> ${data.question}</p>
+                <div class="answer-section">
+                    <p><strong>Answer:</strong> 
+                        <span class="answer-text">${data.correctAnswer}</span>
+                        <div class="answer-links">
+                            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(data.correctAnswer)}" target="_blank">Wikipedia</a>
+                            <a href="https://www.google.com/search?q=${encodeURIComponent(data.correctAnswer)}" target="_blank">Google Search</a>
+                            <a href="https://www.britannica.com/search?query=${encodeURIComponent(data.correctAnswer)}" target="_blank">Britannica</a>
+                        </div>
+                    </p>
+                    <div class="ai-hints">
+                        <p><strong>Question Analysis:</strong></p>
+                        <ul>
+                            <li><strong>Key Concepts:</strong> ${aiHints.keyConcepts}</li>
+                            <li><strong>Time Period:</strong> ${aiHints.timePeriod}</li>
+                            <li><strong>Category:</strong> ${aiHints.category}</li>
+                            <li><strong>Related Topics:</strong> ${aiHints.relatedTopics}</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            if (pastQuestionsList.firstChild) {
+                pastQuestionsList.insertBefore(pastQuestionEntry, pastQuestionsList.firstChild);
+            } else {
+                pastQuestionsList.appendChild(pastQuestionEntry);
+            }
+        }
+
+        // Update UI elements
+        document.getElementById('next-question').style.display = 'block';
+        document.getElementById('buzz-button').style.display = 'none';
+        document.getElementById('answer-form').style.display = 'none';
+
+        // Update stats if available
+        if (data.stats) {
+            const streakCounter = document.getElementById('streak-counter');
+            if (streakCounter) streakCounter.textContent = data.stats.streak || '0';
+            
+            const accuracyEl = document.getElementById('accuracy');
+            if (accuracyEl) accuracyEl.textContent = `${data.stats.accuracy || 0}%`;
+            
+            const fastestBuzzEl = document.getElementById('fastest-buzz');
+            if (fastestBuzzEl) {
+                fastestBuzzEl.textContent = data.stats.fastestBuzz ? 
+                    `${(Math.round(data.stats.fastestBuzz)/1000)}s` : '-';
+            }
+        }
+    } catch (error) {
+        console.error('Error in answerResult:', error);
+    }
+});
+
+        socket.on('newQuestion', () => {
+    document.getElementById('question').textContent = '';
+    document.getElementById('result').textContent = '';
+    document.getElementById('result').className = 'result';
+    document.getElementById('timer').style.display = 'none';
+    document.getElementById('next-question').style.display = 'none';
+    document.getElementById('buzz-button').style.display = 'none';
+    document.getElementById('answer-form').style.display = 'none';
+    currentQuestion = [];
+    canBuzz = true;
+});
+
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const nextQuestionBtn = document.getElementById('next-question');
+
+        speedSlider.addEventListener('input', function() {
+            const speed = this.value;
+            speedValue.textContent = speed + 'ms';
+            socket.emit('updateSpeed', roomType, parseInt(speed));
+        });
+
+        function nextQuestion() {
+            if (roomType) {
+                socket.emit('nextQuestion', roomType);
+                document.getElementById('next-question').style.display = 'none';
+                document.getElementById('answer-form').style.display = 'none';
+                document.getElementById('result').textContent = '';
+                currentQuestion = [];
+            }
+        }
+
+        socket.on('speedUpdated', ({ speed }) => {
+            speedSlider.value = speed;
+            speedValue.textContent = speed + 'ms';
+        });
+
+        socket.on('gameState', ({ gameInProgress, currentWords, players, scores, isRevealing }) => {
+            if (gameInProgress) {
+                gameStarted = true;
+                document.getElementById('start-button').style.display = 'none';
+                
+                // Clear any existing question content
+                document.getElementById('question').textContent = '';
+                document.getElementById('result').textContent = '';
+                document.getElementById('result').className = 'result';
+                currentQuestion = [];
+                
+                // Show next button if no question is being revealed
+                if (currentWords && currentWords.length > 0 && isRevealing) {
+                    document.getElementById('buzz-button').style.display = 'block';
+                    document.getElementById('next-question').style.display = 'none';
+                } else {
+                    document.getElementById('buzz-button').style.display = 'none';
+                    // Only show next button if game has started
+                    document.getElementById('next-question').style.display = gameStarted ? 'block' : 'none';
+                }
+            } else {
+                // Show start button for first player if game hasn't started
+                document.getElementById('start-button').style.display = 
+                    (players.length === 1 && !gameStarted) ? 'block' : 'none';
+                // Show next button if game has started but no question is active
+                document.getElementById('next-question').style.display = 
+                    (gameStarted && !isRevealing) ? 'block' : 'none';
+            }
+            
+            updateScoreboard(scores, players);
+        });
+
+
+        // Add keyboard event listeners
+        document.addEventListener('keydown', function(event) {
+            // Space bar for buzzing
+            if (event.code === 'Space' && 
+                document.getElementById('buzz-button').style.display !== 'none') {
+                event.preventDefault(); // Prevent page scroll
+                buzz();
+            }
+        });
+
+        // Add enter key listener for answer submission
+        document.getElementById('answer').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitAnswer();
+            }
+        });
+
+        socket.on('startTimer', () => {
+    const timerEl = document.getElementById('timer');
+    timerEl.style.display = 'block';
+    let timeLeft = 5;
+    
+    // Clear any existing intervals
+    if (window.timerInterval) {
+        clearInterval(window.timerInterval);
+    }
+    
+    timerEl.textContent = `Time to buzz: ${timeLeft}s`;
+    
+    window.timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft >= 0) {
+            timerEl.textContent = `Time to buzz: ${timeLeft}s`;
+        }
+        
+        if (timeLeft <= 0 || document.getElementById('buzz-button').style.display === 'none') {
+            clearInterval(window.timerInterval);
+            timerEl.style.display = 'none';
+        }
+    }, 1000);
+});
+
+        socket.on('timerEnded', async ({ question, answer, source }) => {
+            try {
+                const timerEl = document.getElementById('timer');
+                timerEl.style.display = 'none';
+                
+                document.getElementById('buzz-button').style.display = 'none';
+                document.getElementById('next-question').style.display = 'block';
+                document.getElementById('result').textContent = `Time's up! The answer was: ${answer}`;
+                
+                // Generate AI hints
+                const aiHints = await generateHints(question, answer);
+                console.log('Generated hints:', aiHints); // Add this for debugging
+                
+                // Add to past questions
+                const pastQuestionsList = document.getElementById('past-questions-list');
+                if (pastQuestionsList) {
+                    const pastQuestionEntry = document.createElement('div');
+                    pastQuestionEntry.className = 'past-question-entry';
+                    pastQuestionEntry.innerHTML = `
+                        <p><strong>Question:</strong> ${question}</p>
+                        <div class="answer-section">
+                            <p><strong>Answer:</strong> 
+                                <span class="answer-text">${answer}</span>
+                                <div class="answer-links">
+                                    <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(answer)}" target="_blank">Wikipedia</a>
+                                    <a href="https://www.google.com/search?q=${encodeURIComponent(answer)}" target="_blank">Google Search</a>
+                                    <a href="https://www.britannica.com/search?query=${encodeURIComponent(answer)}" target="_blank">Britannica</a>
+                                </div>
+                            </p>
+                            <div class="ai-hints">
+                                <p><strong>${aiHints.aiAnalysis ? 'AI Analysis:' : 'Question Analysis:'}</strong></p>
+                                <ul>
+                                    <li><strong>Key Concepts:</strong> ${aiHints.keyConcepts}</li>
+                                    <li><strong>Time Period:</strong> ${aiHints.timePeriod}</li>
+                                    <li><strong>Category:</strong> ${aiHints.category}</li>
+                                    <li><strong>Related Topics:</strong> ${aiHints.relatedTopics}</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p><strong>Result:</strong> No one buzzed in time</p>
+                    `;
+                    
+                    if (pastQuestionsList.firstChild) {
+                        pastQuestionsList.insertBefore(pastQuestionEntry, pastQuestionsList.firstChild);
+                    } else {
+                        pastQuestionsList.appendChild(pastQuestionEntry);
+                    }
+                }
+            } catch (error) {
+                console.error('Error in timerEnded:', error);
+            }
+        });
+
+        async function generateHints(question, answer) {
+    try {
+        // Create a promise that rejects after 3 seconds
+        const timeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('AI analysis timeout')), 3000);
+        });
+
+        // Race between the AI response and timeout
+        const response = await Promise.race([
+            window.hf.textGeneration({
+                model: "gpt2",
+                inputs: `Analyze this history question:
+Question: ${question}
+Answer: ${answer}
+Key events and concepts:`,
+                parameters: {
+                    max_new_tokens: 100,
+                    temperature: 0.3
+                }
+            }),
+            timeout
+        ]);
+
+        if (!response || !response.generated_text) {
+            throw new Error('No response from AI model');
+        }
+
+        // Extract meaningful concepts from AI response
+        const concepts = extractConcepts(question);
+        const timePeriod = extractTimePeriod(question);
+        const category = determineCategory(question, answer);
+
+        return {
+            category: category,
+            timePeriod: timePeriod,
+            keyConcepts: concepts.join('; '),
+            relatedTopics: extractRelatedTopics(question, answer),
+            aiAnalysis: true // Flag to indicate AI analysis was successful
+        };
+    } catch (error) {
+        console.log('Skipping AI analysis:', error.message);
+        // Use direct extraction without AI
+        const concepts = extractConcepts(question);
+        const timePeriod = extractTimePeriod(question);
+        const category = determineCategory(question, answer);
+
+        return {
+            category: category,
+            timePeriod: timePeriod,
+            keyConcepts: concepts.join('; '),
+            relatedTopics: extractRelatedTopics(question, answer),
+            aiAnalysis: false // Flag to indicate fallback analysis was used
+        };
+    }
+}
+
+function extractConcepts(question) {
+    const concepts = [];
+    const sentences = question.split(/[.!?]+/).map(s => s.trim());
+    
+    sentences.forEach(sentence => {
+        // Extract actions and events
+        const actionMatches = sentence.match(/(?:sent|launched|took|deposed|published|wrote|led|developed)([^,\.]+)/gi);
+        if (actionMatches) {
+            concepts.push(...actionMatches.map(m => m.trim()));
+        }
+        
+        // Extract named entities and important phrases
+        const namedMatches = sentence.match(/(?:the\s+)?([A-Z][a-zA-Z\s]+)(?=\s+(?:Project|Front|Movement|Revolution|War|Invasion))/g);
+        if (namedMatches) {
+            concepts.push(...namedMatches.map(m => m.trim()));
+        }
+    });
+    
+    return concepts.filter(c => c.length > 10).slice(0, 4);
+}
+
+function extractTimePeriod(question) {
+    const yearMatch = question.match(/\b(1[0-9]{3}|20[0-2][0-9])\b/);
+    const centuryMatch = question.match(/\b\d{1,2}(?:st|nd|rd|th)\s+century\b/i);
+    return yearMatch ? `Around ${yearMatch[1]}` : 
+           centuryMatch ? centuryMatch[0] : 
+           'Time period not specified';
+}
+
+function determineCategory(question, answer) {
+    const text = (question + ' ' + answer).toLowerCase();
+    
+    if (text.includes('united states') || text.includes('american') || text.includes('u.s.')) {
+        return 'US History - ' + (
+            text.includes('constitution') ? 'Government (42.5%)' :
+            text.includes('war') ? 'Military (17.5%)' :
+            'Social (30%)'
+        );
+    }
+    
+    if (text.includes('europe') || text.includes('britain') || text.includes('france')) {
+        return 'European History - ' + (
+            text.includes('britain') ? 'British (34%)' :
+            text.includes('france') ? 'French (13%)' :
+            'Western (9%)'
+        );
+    }
+    
+    return 'Other History - Mixed/Other (44%)';
+}
+
+function extractRelatedTopics(question, answer) {
+    const words = [...question.split(' '), ...answer.split(' ')];
+    const topics = words.filter(w => 
+        w.length > 5 && 
+        w[0] === w[0].toUpperCase() && 
+        !['This', 'The', 'For', 'In'].includes(w)
+    );
+    return [...new Set(topics)].slice(0, 3).join(', ');
+}
+
+function goBack() {
+    // Reset game state
+    gameStarted = false;
+    currentQuestion = [];
+    
+    // Hide game screen, show join screen
+    document.getElementById('game-screen').style.display = 'none';
+    document.getElementById('join-screen').style.display = 'flex';
+    
+    // Leave current room
+    const roomType = localStorage.getItem('roomType');
+    if (roomType) {
+        socket.emit('leaveRoom', roomType);
+    }
+    localStorage.removeItem('roomType');
+    localStorage.removeItem('username');
+}
+
+// Update the joinSolo function
+function joinSolo() {
+    const username = document.getElementById('username-input').value.trim();
+    if (!username) {
+        alert('Please enter a username');
+        return;
+    }
+    
+    localStorage.setItem('username', username);
+    localStorage.setItem('roomType', socket.id);
+    
+    socket.emit('joinRoom', socket.id, username, false);
+    
+    document.getElementById('join-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'block';
+}
+    </script>
+</body>
+</html> 
