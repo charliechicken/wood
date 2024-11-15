@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multiplayer Game</title>
+  
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { background-color: #eee; display: block; }
+    #startScreen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border: 1px solid #000;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #iconSelection img {
+      width: 100px;
+      height: 100px;
+      margin: 5px;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    #ground {
+      display: none;
+    }
+    #iconSelection img.selected {
+      border: 2px solid blue;
+    }
+    /* Style for the YouTube video in the top left corner */
+    #youtubeContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 600px;
+      height: 340px;
+      z-index: 20;
+    }
+  </style>
+</head>
+<body>
+  <!-- Add this before the startScreen div -->
+<div id="levelSelectScreen" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #000; z-index: 10;">
+  <h2>Select Level</h2>
+  <div id="levelButtons">
+    <button class="levelBtn" data-level="1">Level 1</button>
+    <button class="levelBtn" data-level="2">Level 2</button>
+  </div>
+  <br>
+  <button id="backToStart">Back</button>
+</div>
+  <div id="startScreen">
+    <h2>Enter Your Name</h2>
+    <input type="text" id="playerNameInput" placeholder="Player Name" />
+    <h3>Select an Icon</h3>
+    <div id="iconSelection">
+      <img src="hawktuah.png" alt="Icon 1" class="icon" data-icon="hawktuah.png" id="hawk">
+      <img src="troll.webp" alt="Icon 2" class="icon" data-icon="troll.webp" id="troll">
+      <img src="spongbob.png" alt="Icon 3" class="icon" data-icon="spongbob.png" id="spongbob">
+      <img src="stephen.jpeg" alt="Icon 4" class="icon" data-icon="stephen.jpeg" id="stephen">
+      <img src="daring.jpeg" alt="Icon 5" class="icon" data-icon="daring.jpeg" id="daring">
+      <img src="spencer1.png" alt="Icon 6" class="icon" data-icon="spencer1.png" id="spencer">
+      
+      <img src="viny.png" alt="Icon 5" class="icon" data-icon="viny.png" id="viny">
+      <img src="ray.png" alt="Icon 5" class="icon" data-icon="ray.png" id="ray">
+      <img src="ryan.png" alt="Icon 5" class="icon" data-icon="ryan.png" id="ryan">
+      <img src="spencer2.png" alt="Icon 6" class="icon" data-icon="spencer2.png" id="spencer2">
+      <img src="krug.JPG" alt="Icon 5" class="icon" data-icon="krug.JPG" id="krug">
+      <img src="ryan2.png" alt="Icon 5" class="icon" data-icon="ryan2.png" id="ryan2">
+      <img src="haaland.png" alt="Icon 5" class="icon" data-icon="haaland.png" id="haaland">
+    </div>
+
+    <h3>Enter a YouTube Link</h3>
+    <input type="text" id="youtubeLinkInput" placeholder="YouTube Video Link" />
+    <br>
+    <button id="loadYouTubeButton">Load Video</button>
+    <br>
+    <audio id="backgroundMusic" src="bgmusic.mp3" loop></audio>
+    <!-- Replace the start game button with this -->
+<button id="startGameButton" disabled>Continue to Level Select</button>
+  </div>
+  
+  <canvas id="gameCanvas"></canvas>
+  
+  <!-- Container for the YouTube video -->
+  <div id="youtubeContainer">
+    <iframe id="youtubePlayer" width="400" height="300" frameborder="0" allowfullscreen></iframe>
+  </div>
+  <div id="chatContainer" style="display: none; position: fixed; left: 10px; top: 10px; z-index: 1000; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; width: 300px;">
+    <div id="chatMessages" style="height: 150px; overflow-y: auto; color: white; margin-bottom: 10px; font-family: Arial;"></div>
+    <input type="text" id="chatInput" placeholder="Press Enter to chat..." style="width: 100%; padding: 5px; border-radius: 3px; border: none;">
+</div>
+<!-- Remove existing script tags and replace with: -->
+<script src="main.js"></script>
+</body>
+</html>
