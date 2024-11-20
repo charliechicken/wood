@@ -268,8 +268,6 @@ class Player {
         this.speedY = 0;
         if (spritePath === "ray.png") {
             this.gravity = 1.5;
-        } else if (spritePath === "stephen.jpeg") {
-            this.gravity = 10;
         } else if (spritePath === "ryan2.png") {
             this.gravity = 0.3;
         } else if (spritePath === "spencer1.png") {
